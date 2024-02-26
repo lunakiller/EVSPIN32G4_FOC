@@ -36,6 +36,8 @@
 *.i*86
 *.x86_64
 *.hex
+*.bin
+*.elf
 
 # Debug files
 *.dSYM/
@@ -52,3 +54,6 @@ Module.symvers
 Mkfile.old
 dkms.conf
 
+# STM32CubeIDE files
+STM32CubeIDE/Debug/
+STM32CubeIDE/.settings
