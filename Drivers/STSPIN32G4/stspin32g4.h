@@ -71,8 +71,8 @@ typedef enum {
 
 
 /* ------------------------------ Functions -------------------------------- */
-HAL_StatusTypeDef DRV_ReadReg(uint8_t addr, uint8_t* val);
-HAL_StatusTypeDef DRV_WriteReg(uint8_t addr, uint8_t val);
+/*static*/ DRV_StatusTypeDef DRV_ReadReg(uint8_t addr, uint8_t* val);
+/*static*/ DRV_StatusTypeDef DRV_WriteReg(uint8_t addr, uint8_t val);
 
 
 #endif /* __STSPIN32G4_H */
