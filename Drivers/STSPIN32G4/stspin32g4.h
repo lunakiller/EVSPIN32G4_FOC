@@ -37,7 +37,7 @@
 #define DRV_I2C_READY_THSD_RDY			(0b1 << 1)			// Disabled by default, 1 to enable
 #define DRV_I2C_READY_VCC_UVLO_RDY	(0b1 << 0)			// Enabled by default, 0 to disable
 
-// nFAULT output configuration register, default: 0x7f, Protected
+// nFAULT output configuration register, default: 0x7F, Protected
 #define DRV_I2C_NFAULT							0x08
 #define DRV_I2C_NFAULT_VDS_P_FLT		(0b1 << 2)			// Enabled by default, 0 to disable
 #define DRV_I2C_NFAULT_THSD_FLT			(0b1 << 1)			// Enabled by default, 0 to disable
@@ -62,6 +62,12 @@
 #define DRV_I2C_STATUS_VDS_P				(0b1 << 2)			// 0: VDS protection not triggered, 1: triggered
 #define DRV_I2C_STATUS_THSD					(0b1 << 1)			// 0: device not in THSD, 1: in THSD
 #define DRV_I2C_STATUS_UVLO					(0b1 << 0)			// 0: device not in VCC UVLO, 1: in VCC UVLO
+
+/* --------------------------- Type definitions ---------------------------- */
+typedef enum {
+  DRV_OK       = 0x00U,
+  DRV_ERROR    = 0x01U
+} DRV_StatusTypeDef;
 
 
 /* ------------------------------ Functions -------------------------------- */
