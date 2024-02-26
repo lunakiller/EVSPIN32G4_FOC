@@ -157,6 +157,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_utils.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/STSPIN32G4/stspin32g4.c</name>
+			<type>1</type>
+			<location>/home/lunakiller/PROJECTS/EVSPIN32G4_FOC/Drivers/STSPIN32G4/stspin32g4.c</location>
+		</link>
+		<link>
 			<name>Application/User/Core/main.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/main.c</locationURI>

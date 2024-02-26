@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "stspin32g4.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -102,7 +102,16 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-  HAL_UART_Transmit(&huart1, (uint8_t*)"STSPIN32G4 Initialized!", 24, 100)
+  HAL_UART_Transmit(&huart1, (uint8_t*)"STSPIN32G4 Initialized!", 24, 100);
+
+  uint8_t reg_val = 0;
+  DRV_ReadReg(DRV_I2C_STATUS, &reg_val);
+  __NOP();
+  DRV_ReadReg(DRV_I2C_LOCK, &reg_val);
+  __NOP();
+  DRV_ReadReg(DRV_I2C_POWMNG, &reg_val);
+  __NOP();
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
   /* Infinite loop */
