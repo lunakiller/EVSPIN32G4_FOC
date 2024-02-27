@@ -76,6 +76,10 @@ typedef enum {
 /*static*/ DRV_StatusTypeDef DRV_WriteReg(uint8_t addr, uint8_t val);
 DRV_StatusTypeDef DRV_Unlock(void);
 DRV_StatusTypeDef DRV_Lock(void);
+DRV_StatusTypeDef DRV_SetVCC(uint8_t vcc_bits);
+DRV_StatusTypeDef DRV_SetDeglitch(uint8_t vds_p_deg_bits);
+DRV_StatusTypeDef DRV_Reset(void);
+DRV_StatusTypeDef DRV_ClearFaults(void);
 
 
 #endif /* __STSPIN32G4_H */
