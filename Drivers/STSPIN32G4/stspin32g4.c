@@ -3,6 +3,12 @@
  *
  *  Created on: Feb 25, 2024
  *      Author: lunakiller
+ *
+ *
+ * ------------------------------- ! NOTICE ! ---------------------------------
+ *    This library assumes that both I2C3 peripheral and GPIO pins for gate
+ *    driver are correctly set and initialized!!!
+ * ----------------------------------------------------------------------------
  */
 
 #include "stspin32g4.h"
@@ -23,6 +29,28 @@ extern I2C_HandleTypeDef hi2c3;
 		return DRV_OK;
 	else
 		return DRV_ERROR;
+}
+
+
+DRV_StatusTypeDef DRV_Init(void) {
+  // unlock registers
+  if(DRV_Unlock() != DRV_OK)
+    return DRV_ERROR;
+  // perform a reset
+  DRV_Reset();
+  // unlock again since the reset re-locked
+  if(DRV_Unlock() != DRV_OK)
+    return DRV_ERROR;
+  // set VCC value
+  if(DRV_SetVCC(DRV_I2C_POWMNG_VCC_VAL_0) != DRV_OK)        // VCC reg output 10V
+    return DRV_ERROR;
+  // set deglitch value
+  if(DRV_SetDeglitch(DRV_I2C_LOGIC_VDS_P_DEG_0) != DRV_OK)  // deglitch 4us
+    return DRV_ERROR;
+  // lock and clear faults
+  DRV_Lock();
+  DRV_ClearFaults();
+  return DRV_OK;
 }
 
 DRV_StatusTypeDef DRV_Unlock(void) {

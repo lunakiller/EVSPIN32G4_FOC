@@ -107,9 +107,9 @@ int main(void)
   uint8_t reg_val = 0;
   DRV_ReadReg(DRV_I2C_STATUS, &reg_val);
 
-  if(DRV_Unlock() != DRV_OK)
+  if(DRV_Init() != DRV_OK)
     Error_Handler();
-  HAL_UART_Transmit(&huart1, (uint8_t*)"GateDriver unlocked!\r\n", 23, 100);
+  HAL_UART_Transmit(&huart1, (uint8_t*)"Gate Driver initialized!\r\n", 27, 100);
 
   DRV_ReadReg(DRV_I2C_STATUS, &reg_val);
   __NOP();

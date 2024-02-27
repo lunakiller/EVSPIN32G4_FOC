@@ -3,6 +3,12 @@
  *
  *  Created on: Feb 25, 2024
  *      Author: lunakiller
+ *
+ *
+ * ------------------------------- ! NOTICE ! ---------------------------------
+ *    This library assumes that both I2C3 peripheral and GPIO pins for gate
+ *    driver are correctly set and initialized!!!
+ * ----------------------------------------------------------------------------
  */
 
 #ifndef __STSPIN32G4_H
@@ -74,6 +80,7 @@ typedef enum {
 /* ------------------------------ Functions -------------------------------- */
 /*static*/ DRV_StatusTypeDef DRV_ReadReg(uint8_t addr, uint8_t* val);
 /*static*/ DRV_StatusTypeDef DRV_WriteReg(uint8_t addr, uint8_t val);
+DRV_StatusTypeDef DRV_Init(void);
 DRV_StatusTypeDef DRV_Unlock(void);
 DRV_StatusTypeDef DRV_Lock(void);
 DRV_StatusTypeDef DRV_SetVCC(uint8_t vcc_bits);
