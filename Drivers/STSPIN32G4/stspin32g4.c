@@ -24,3 +24,17 @@ extern I2C_HandleTypeDef hi2c3;
 	else
 		return DRV_ERROR;
 }
+
+DRV_StatusTypeDef DRV_Unlock(void) {
+	DRV_WriteReg(DRV_I2C_LOCK, DRV_I2C_LOCK_KEY);
+	uint8_t key = 0;
+	DRV_ReadReg(DRV_I2C_LOCK, &key);
+	if(key == DRV_I2C_LOCK_KEY)
+		return DRV_OK;
+	else
+		return DRV_ERROR;
+}
+
+DRV_StatusTypeDef DRV_Lock(void) {
+	return DRV_WriteReg(DRV_I2C_LOCK, 0x00);
+}

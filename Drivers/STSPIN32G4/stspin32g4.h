@@ -51,6 +51,7 @@
 
 // LOCK register, default: 0x0
 #define DRV_I2C_LOCK								0x0B						// LOCK[3:0] = ~LOCK[7:4]
+#define DRV_I2C_LOCK_KEY						0xA5
 
 // RESET command register, Protected
 #define DRV_I2C_RESET								0x0C						// Write 0xff to reset registers to their defaults
@@ -73,6 +74,8 @@ typedef enum {
 /* ------------------------------ Functions -------------------------------- */
 /*static*/ DRV_StatusTypeDef DRV_ReadReg(uint8_t addr, uint8_t* val);
 /*static*/ DRV_StatusTypeDef DRV_WriteReg(uint8_t addr, uint8_t val);
+DRV_StatusTypeDef DRV_Unlock(void);
+DRV_StatusTypeDef DRV_Lock(void);
 
 
 #endif /* __STSPIN32G4_H */

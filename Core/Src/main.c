@@ -102,15 +102,22 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-  HAL_UART_Transmit(&huart1, (uint8_t*)"STSPIN32G4 Initialized!", 24, 100);
+  HAL_UART_Transmit(&huart1, (uint8_t*)"STSPIN32G4 initialized!\r\n", 26, 100);
 
   uint8_t reg_val = 0;
+  DRV_ReadReg(DRV_I2C_STATUS, &reg_val);
+
+  if(DRV_Unlock() != DRV_OK)
+    Error_Handler();
+  HAL_UART_Transmit(&huart1, (uint8_t*)"GateDriver unlocked!\r\n", 23, 100);
+
   DRV_ReadReg(DRV_I2C_STATUS, &reg_val);
   __NOP();
   DRV_ReadReg(DRV_I2C_LOCK, &reg_val);
   __NOP();
   DRV_ReadReg(DRV_I2C_POWMNG, &reg_val);
   __NOP();
+
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
   /* USER CODE END 2 */
 
@@ -478,8 +485,15 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
+	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+
   while (1)
   {
+    HAL_GPIO_TogglePin(LED2_GPIO_Port, LED2_Pin);
+    HAL_GPIO_TogglePin(LED3_GPIO_Port, LED3_Pin);
+    LL_mDelay(200);
   }
   /* USER CODE END Error_Handler_Debug */
 }
