@@ -47,6 +47,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_adc.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_adc_ex.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_adc_ex.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_cortex.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_cortex.c</locationURI>
@@ -107,6 +117,16 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_i2c_ex.c</locationURI>
 		</link>
 		<link>
+			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_opamp.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_opamp.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_opamp_ex.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_opamp_ex.c</locationURI>
+		</link>
+		<link>
 			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_pwr.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_pwr.c</locationURI>
@@ -145,6 +165,11 @@
 			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_uart_ex.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_ll_adc.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_adc.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_ll_exti.c</name>

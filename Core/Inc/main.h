@@ -71,10 +71,14 @@ void Error_Handler(void);
 /* Private defines -----------------------------------------------------------*/
 #define LED2_Pin GPIO_PIN_13
 #define LED2_GPIO_Port GPIOC
+#define ADC1_VBUS_Pin GPIO_PIN_0
+#define ADC1_VBUS_GPIO_Port GPIOA
 #define DBG_DAC1_Pin GPIO_PIN_4
 #define DBG_DAC1_GPIO_Port GPIOA
 #define DBG_DAC2_Pin GPIO_PIN_5
 #define DBG_DAC2_GPIO_Port GPIOA
+#define ADC2_NTC_Pin GPIO_PIN_4
+#define ADC2_NTC_GPIO_Port GPIOC
 #define DRV_WKUP_Pin GPIO_PIN_7
 #define DRV_WKUP_GPIO_Port GPIOE
 #define DRV_INL1_Pin GPIO_PIN_8
