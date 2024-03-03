@@ -57,3 +57,4 @@ dkms.conf
 # STM32CubeIDE files
 STM32CubeIDE/Debug/
 STM32CubeIDE/.settings
+STM32CubeIDE/*.launch
