@@ -23,33 +23,21 @@
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
 #include "settings.h"
+#include "typedefs.h"
 #include "stspin32g4.h"
+#include "IRQ_handlers.h"
+
+#include "swo_debug.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-typedef struct {
-    int16_t phase_u_offset;
-    int16_t phase_v_offset;
-    int16_t phase_w_offset;
-} CS_Offset_t;
 
-typedef struct {
-    CS_Offset_t offsets;      // current sensing offsets
-} Board_Settings_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define VBUS_ADC1_CHANNEL     ADC_CHANNEL_1
-#define U_ADC1_CHANNEL        ADC_CHANNEL_6
-#define V_ADC1_CHANNEL        ADC_CHANNEL_7
-#define W_ADC2_CHANNEL        ADC_CHANNEL_8
-#define CS_U_ADC1_CHANNEL     ADC_CHANNEL_3
-#define CS_V_ADC2_CHANNEL     ADC_CHANNEL_3
-#define CS_W_ADC1_CHANNEL     ADC_CHANNEL_12
-#define NTC_ADC2_CHANNEL      ADC_CHANNEL_5
-#define POT_ADC2_CHANNEL      ADC_CHANNEL_9
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -96,7 +84,7 @@ static void MX_OPAMP2_Init(void);
 static void MX_OPAMP3_Init(void);
 static void MX_WWDG_Init(void);
 /* USER CODE BEGIN PFP */
-void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg);
+
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -1130,9 +1118,7 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_WWDG_EarlyWakeupCallback(WWDG_HandleTypeDef *hwwdg) {
-  DEBUG_printf("WATCHDOG!");
-}
+
 /* USER CODE END 4 */
 
 /**
