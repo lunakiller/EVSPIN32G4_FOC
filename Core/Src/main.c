@@ -64,7 +64,7 @@ UART_HandleTypeDef huart1;
 WWDG_HandleTypeDef hwwdg;
 
 /* USER CODE BEGIN PV */
-Board_Settings_t evspin;
+Board_Settings_t evspin = {0};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -107,8 +107,17 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 }
 
 void ADCs_Setup(void) {
+  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
   ADC_ChannelConfTypeDef sConfig = {0};
   ADC_InjectionConfTypeDef sConfigInjected = {0};
+
+  // disable ADC and DMA
+  HAL_ADC_Stop_DMA(&hadc1);
+  HAL_ADC_Stop_DMA(&hadc2);
+
+  // enable DMA circular mode
+  LL_DMA_SetMode(__LL_DMA_GET_INSTANCE(hdma_adc1.Instance), __LL_DMA_GET_CHANNEL(hdma_adc1.Instance), LL_DMA_MODE_CIRCULAR);
+  LL_DMA_SetMode(__LL_DMA_GET_INSTANCE(hdma_adc2.Instance), __LL_DMA_GET_CHANNEL(hdma_adc2.Instance), LL_DMA_MODE_CIRCULAR);
 
   // configure ADC1
   hadc1.Instance = ADC1;
@@ -117,10 +126,10 @@ void ADCs_Setup(void) {
   hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc1.Init.GainCompensation = 0;
   hadc1.Init.ScanConvMode = ADC_SCAN_ENABLE;
-  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   hadc1.Init.LowPowerAutoWait = DISABLE;
   hadc1.Init.ContinuousConvMode = ENABLE;
-  hadc1.Init.NbrOfConversion = 3;
+  hadc1.Init.NbrOfConversion = ADC1_REG_CHANNELS;
   hadc1.Init.DiscontinuousConvMode = DISABLE;
   hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -131,7 +140,19 @@ void ADCs_Setup(void) {
     Error_Handler();
   }
 
-  // configure regular channels: VBUS, phase U and phase V
+  // configure Analog WatchDog 1
+  AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
+  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
+  AnalogWDGConfig.Channel = ADC_CHANNEL_1;
+  AnalogWDGConfig.ITMode = ENABLE;
+  AnalogWDGConfig.HighThreshold = OVERVOLTAGE_THRESHOLD * (1.0 / VBUS_COEFF) * 4096 / 3.3;
+  AnalogWDGConfig.LowThreshold = UNDERVOLTAGE_THRESHOLD * (1.0 / VBUS_COEFF) * 4096 / 3.3;
+  AnalogWDGConfig.FilteringConfig = ADC_AWD_FILTERING_NONE;
+  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK) {
+    Error_Handler();
+  }
+
+  // configure regular channels: VBUS, phase U, phase V and Vrefint
   sConfig.Channel = VBUS_ADC1_CHANNEL;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   sConfig.SamplingTime = ADC_SAMPLETIME_24CYCLES_5;
@@ -148,8 +169,15 @@ void ADCs_Setup(void) {
     Error_Handler();
   }
 
-  sConfig.Channel = VBUS_ADC1_CHANNEL;
+  sConfig.Channel = V_ADC1_CHANNEL;
   sConfig.Rank = ADC_REGULAR_RANK_3;
+  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
+    Error_Handler();
+  }
+
+  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  sConfig.Rank = ADC_REGULAR_RANK_4;
+  sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
     Error_Handler();
   }
@@ -162,12 +190,12 @@ void ADCs_Setup(void) {
   sConfigInjected.InjectedSingleDiff = ADC_SINGLE_ENDED;
   sConfigInjected.InjectedOffsetNumber = ADC_OFFSET_NONE;
   sConfigInjected.InjectedOffset = 0;
-  sConfigInjected.InjectedNbrOfConversion = 2;
+  sConfigInjected.InjectedNbrOfConversion = ADC1_INJ_CHANNELS;
   sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
   sConfigInjected.AutoInjectedConv = DISABLE;
   sConfigInjected.QueueInjectedContext = DISABLE;
-  sConfigInjected.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
-  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_NONE;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_CC4;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   sConfigInjected.InjecOversamplingMode = DISABLE;
   if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK) {
     Error_Handler();
@@ -186,10 +214,10 @@ void ADCs_Setup(void) {
   hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
   hadc2.Init.GainCompensation = 0;
   hadc2.Init.ScanConvMode = ADC_SCAN_ENABLE;
-  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.EOCSelection = ADC_EOC_SEQ_CONV;
   hadc2.Init.LowPowerAutoWait = DISABLE;
   hadc2.Init.ContinuousConvMode = ENABLE;
-  hadc2.Init.NbrOfConversion = 3;
+  hadc2.Init.NbrOfConversion = ADC2_REG_CHANNELS;
   hadc2.Init.DiscontinuousConvMode = DISABLE;
   hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
   hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
@@ -231,62 +259,112 @@ void ADCs_Setup(void) {
   sConfigInjected.InjectedSingleDiff = ADC_SINGLE_ENDED;
   sConfigInjected.InjectedOffsetNumber = ADC_OFFSET_NONE;
   sConfigInjected.InjectedOffset = 0;
-  sConfigInjected.InjectedNbrOfConversion = 1;
+  sConfigInjected.InjectedNbrOfConversion = ADC2_INJ_CHANNELS;
   sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
   sConfigInjected.AutoInjectedConv = DISABLE;
   sConfigInjected.QueueInjectedContext = DISABLE;
-  sConfigInjected.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
-  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_NONE;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_CC4;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   sConfigInjected.InjecOversamplingMode = DISABLE;
   if (HAL_ADCEx_InjectedConfigChannel(&hadc2, &sConfigInjected) != HAL_OK) {
     Error_Handler();
   }
 
-  // TODO run ADCs
+  // calibrate ADCs
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+  HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
+
+  // enable interrupts
+  HAL_NVIC_SetPriority(ADC1_2_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(ADC1_2_IRQn);
+
+  // run ADCs
+  HAL_ADC_Start_DMA(&hadc1, (uint32_t*)evspin.adc.buffers.ADC1_reg_raw, ADC1_REG_CHANNELS);
+  HAL_ADC_Start_DMA(&hadc2, (uint32_t*)evspin.adc.buffers.ADC2_reg_raw, ADC2_REG_CHANNELS);
+  HAL_ADCEx_InjectedStart_IT(&hadc1);
+  HAL_ADCEx_InjectedStart_IT(&hadc2);
+
+  // disable DMA interrupts
+  __HAL_DMA_DISABLE_IT(&hdma_adc1, DMA_IT_HT|DMA_IT_TC);
+  __HAL_DMA_DISABLE_IT(&hdma_adc2, DMA_IT_HT|DMA_IT_TC);
+
+  // disable ADC2 injected end-of-sequence IRQ since both ADCs are triggered
+  // at the exact same time and ADC2 will always be faster
+  __HAL_ADC_DISABLE_IT(&hadc2, ADC_IT_JEOS);
+
+  evspin.adc.running = true;
+  return;
+}
+
+void OPAMPs_Setup(void) {
+  HAL_OPAMPEx_SelfCalibrateAll(&hopamp1, &hopamp2, &hopamp3);
+  HAL_OPAMP_Start(&hopamp1);
+  HAL_OPAMP_Start(&hopamp2);
+  HAL_OPAMP_Start(&hopamp3);
+
+  return;
 }
 
 void OPAMPs_OffsetCalibration(void) {
-  uint16_t buffer[16] = {0};
-  volatile uint16_t vdda;
-  ADC_ChannelConfTypeDef sConfig = {0};
+  uint16_t buffer[CS_OFFSET_CALIB_AVG] = {0};
   uint32_t mean;
-  // Vrefint
-  sConfig.Channel = ADC_CHANNEL_VREFINT;
+  ADC_ChannelConfTypeDef sConfig = {0};
+
+  // disable ADC and DMA
+  HAL_ADC_Stop_DMA(&hadc1);
+  HAL_ADC_Stop_DMA(&hadc2);
+
+  // disable DMA circular mode
+  LL_DMA_SetMode(__LL_DMA_GET_INSTANCE(hdma_adc1.Instance), __LL_DMA_GET_CHANNEL(hdma_adc1.Instance), LL_DMA_MODE_NORMAL);
+  LL_DMA_SetMode(__LL_DMA_GET_INSTANCE(hdma_adc2.Instance), __LL_DMA_GET_CHANNEL(hdma_adc2.Instance), LL_DMA_MODE_NORMAL);
+
+  // configure ADC1
+  hadc1.Instance = ADC1;
+  hadc1.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc1.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc1.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc1.Init.GainCompensation = 0;
+  hadc1.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc1.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc1.Init.LowPowerAutoWait = DISABLE;
+  hadc1.Init.ContinuousConvMode = ENABLE;
+  hadc1.Init.NbrOfConversion = 1;
+  hadc1.Init.DiscontinuousConvMode = DISABLE;
+  hadc1.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc1.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc1.Init.DMAContinuousRequests = DISABLE;
+  hadc1.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  hadc1.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc1) != HAL_OK) {
+    Error_Handler();
+  }
+
+  // calibrate ADC
+  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
+
+  // phase U
+  sConfig.Channel = CS_U_ADC1_CHANNEL;
   sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_247CYCLES_5;
+  sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
   sConfig.SingleDiff = ADC_SINGLE_ENDED;
   sConfig.OffsetNumber = ADC_OFFSET_NONE;
   sConfig.Offset = 0;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
     Error_Handler();
   }
-  HAL_ADC_Start(&hadc1);
-  if(HAL_ADC_PollForConversion(&hadc1, 1) != HAL_OK) {
-    Error_Handler();
-  }
-  HAL_ADC_Stop(&hadc1);
-  vdda = VREFINT_CAL_VREF * *VREFINT_CAL_ADDR / HAL_ADC_GetValue(&hadc1);
-
-  // phase U
-  sConfig.Channel = ADC_CHANNEL_3;
-  sConfig.Rank = ADC_REGULAR_RANK_1;
-  sConfig.SamplingTime = ADC_SAMPLETIME_12CYCLES_5;
-  if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
-    Error_Handler();
-  }
   HAL_ADC_Start_DMA(&hadc1, (uint32_t*)buffer, 16);
   while(!adc1_dma);
   adc1_dma = false;
 
   mean = 0;
-  for(int i = 0; i < 16; ++i) {
+  for(int i = 0; i < CS_OFFSET_CALIB_AVG; ++i) {
     mean += buffer[i];
   }
-  mean /= 16;
-  evspin.offsets.phase_u_offset = mean - 2048;
+  mean /= CS_OFFSET_CALIB_AVG;
+  evspin.offsets.phase_u_offset = mean;
 
   // phase W
-  sConfig.Channel = ADC_CHANNEL_12;
+  sConfig.Channel = CS_W_ADC1_CHANNEL;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   if (HAL_ADC_ConfigChannel(&hadc1, &sConfig) != HAL_OK) {
     Error_Handler();
@@ -296,14 +374,38 @@ void OPAMPs_OffsetCalibration(void) {
   adc1_dma = false;
 
   mean = 0;
-  for(int i = 0; i < 16; ++i) {
+  for(int i = 0; i < CS_OFFSET_CALIB_AVG; ++i) {
     mean += buffer[i];
   }
-  mean /= 16;
-  evspin.offsets.phase_w_offset = mean - 2048;
+  mean /= CS_OFFSET_CALIB_AVG;
+  evspin.offsets.phase_w_offset = mean;
+
+  // configure ADC2
+  hadc2.Instance = ADC2;
+  hadc2.Init.ClockPrescaler = ADC_CLOCK_SYNC_PCLK_DIV4;
+  hadc2.Init.Resolution = ADC_RESOLUTION_12B;
+  hadc2.Init.DataAlign = ADC_DATAALIGN_RIGHT;
+  hadc2.Init.GainCompensation = 0;
+  hadc2.Init.ScanConvMode = ADC_SCAN_DISABLE;
+  hadc2.Init.EOCSelection = ADC_EOC_SINGLE_CONV;
+  hadc2.Init.LowPowerAutoWait = DISABLE;
+  hadc2.Init.ContinuousConvMode = ENABLE;
+  hadc2.Init.NbrOfConversion = 1;
+  hadc2.Init.DiscontinuousConvMode = DISABLE;
+  hadc2.Init.ExternalTrigConv = ADC_SOFTWARE_START;
+  hadc2.Init.ExternalTrigConvEdge = ADC_EXTERNALTRIGCONVEDGE_NONE;
+  hadc2.Init.DMAContinuousRequests = DISABLE;
+  hadc2.Init.Overrun = ADC_OVR_DATA_OVERWRITTEN;
+  hadc2.Init.OversamplingMode = DISABLE;
+  if (HAL_ADC_Init(&hadc2) != HAL_OK) {
+    Error_Handler();
+  }
+
+  // calibrate ADC
+  HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
 
   // phase V
-  sConfig.Channel = ADC_CHANNEL_3;
+  sConfig.Channel = CS_V_ADC2_CHANNEL;
   sConfig.Rank = ADC_REGULAR_RANK_1;
   if (HAL_ADC_ConfigChannel(&hadc2, &sConfig) != HAL_OK) {
     Error_Handler();
@@ -313,7 +415,7 @@ void OPAMPs_OffsetCalibration(void) {
   adc2_dma = false;
 
   mean = 0;
-  for(int i = 0; i < 16; ++i) {
+  for(int i = 0; i < CS_OFFSET_CALIB_AVG; ++i) {
     mean += buffer[i];
   }
   mean /= CS_OFFSET_CALIB_AVG;
@@ -485,20 +587,21 @@ void EVSPIN32G4_Init(void) {
       Error_Handler();
   DEBUG_printf("Gate Driver initialized!\r\n");
 
-  // calibrate ADCs
-  HAL_ADCEx_Calibration_Start(&hadc1, ADC_SINGLE_ENDED);
-  HAL_ADCEx_Calibration_Start(&hadc2, ADC_SINGLE_ENDED);
-  DEBUG_printf("ADCs self-calibrated!\r\n");
-
   // OPAMPs
-  HAL_OPAMPEx_SelfCalibrateAll(&hopamp1, &hopamp2, &hopamp3);
-  HAL_OPAMP_Start(&hopamp1);
-  HAL_OPAMP_Start(&hopamp2);
-  HAL_OPAMP_Start(&hopamp3);
+  OPAMPs_Setup();
   DEBUG_printf("OPAMPs self-calibrated and running!\r\n");
 
   OPAMPs_OffsetCalibration();
   DEBUG_printf("OPAMPs offsets calibrated!\r\n");
+
+  // ADCs
+  ADCs_Setup();
+  DEBUG_printf("ADCs self-calibrated and running!\r\n");
+
+  TIM1_Setup();
+  DEBUG_printf("Main timer initialized!\r\n");
+
+  return;
 }
 /* USER CODE END 0 */
 
@@ -549,9 +652,6 @@ int main(void)
   // init board
   EVSPIN32G4_Init();
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-
-  // start ADC
-  HAL_ADC_Start(&hadc1);
 
 
   /* USER CODE END 2 */
@@ -628,6 +728,7 @@ static void MX_ADC1_Init(void)
   /* USER CODE END ADC1_Init 0 */
 
   ADC_MultiModeTypeDef multimode = {0};
+  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
   ADC_ChannelConfTypeDef sConfig = {0};
   ADC_InjectionConfTypeDef sConfigInjected = {0};
 
@@ -662,6 +763,20 @@ static void MX_ADC1_Init(void)
   */
   multimode.Mode = ADC_MODE_INDEPENDENT;
   if (HAL_ADCEx_MultiModeConfigChannel(&hadc1, &multimode) != HAL_OK)
+  {
+    Error_Handler();
+  }
+
+  /** Configure Analog WatchDog 1
+  */
+  AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
+  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
+  AnalogWDGConfig.Channel = ADC_CHANNEL_1;
+  AnalogWDGConfig.ITMode = ENABLE;
+  AnalogWDGConfig.HighThreshold = 0;
+  AnalogWDGConfig.LowThreshold = 0;
+  AnalogWDGConfig.FilteringConfig = ADC_AWD_FILTERING_NONE;
+  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK)
   {
     Error_Handler();
   }
@@ -719,8 +834,8 @@ static void MX_ADC1_Init(void)
   sConfigInjected.InjectedDiscontinuousConvMode = DISABLE;
   sConfigInjected.AutoInjectedConv = DISABLE;
   sConfigInjected.QueueInjectedContext = DISABLE;
-  sConfigInjected.ExternalTrigInjecConv = ADC_INJECTED_SOFTWARE_START;
-  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_NONE;
+  sConfigInjected.ExternalTrigInjecConv = ADC_EXTERNALTRIGINJEC_T1_CC4;
+  sConfigInjected.ExternalTrigInjecConvEdge = ADC_EXTERNALTRIGINJECCONV_EDGE_RISING;
   sConfigInjected.InjecOversamplingMode = DISABLE;
   if (HAL_ADCEx_InjectedConfigChannel(&hadc1, &sConfigInjected) != HAL_OK)
   {
@@ -1355,6 +1470,8 @@ void Error_Handler(void)
   /* USER CODE BEGIN Error_Handler_Debug */
   /* User can add his own implementation to report the HAL error return state */
   __disable_irq();
+
+  // TODO disable Timer outputs
 
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_RESET);
 	HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
