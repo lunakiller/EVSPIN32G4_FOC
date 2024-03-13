@@ -22,6 +22,7 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include "typedefs.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -59,6 +60,7 @@ extern DMA_HandleTypeDef hdma_adc1;
 extern DMA_HandleTypeDef hdma_adc2;
 /* USER CODE BEGIN EV */
 extern WWDG_HandleTypeDef hwwdg;
+extern Board_Settings_t evspin;
 /* USER CODE END EV */
 
 /******************************************************************************/
@@ -188,6 +190,14 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
+  if(evspin.adc.running) {
+    evspin.adc.vdda = VREFINT_CAL_VREF * *VREFINT_CAL_ADDR / evspin.adc.buffers.ADC1_reg_raw[VREFINT_ADC1];
+    evspin.adc.vbus = evspin.adc.buffers.ADC1_reg_raw[VBUS_ADC1] * evspin.adc.vdda / 4096 * VBUS_COEFF;
+    evspin.adc.pot = evspin.adc.buffers.ADC2_reg_raw[POT_ADC2];
+
+  }
+
+
   HAL_WWDG_Refresh(&hwwdg);
   /* USER CODE END SysTick_IRQn 1 */
 }
