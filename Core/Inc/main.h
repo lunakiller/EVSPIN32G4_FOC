@@ -37,6 +37,7 @@ extern "C" {
 #include "stm32g4xx_ll_utils.h"
 #include "stm32g4xx_ll_pwr.h"
 #include "stm32g4xx_ll_dma.h"
+#include "stm32g4xx_ll_tim.h"
 #include "stm32g4xx_ll_gpio.h"
 
 /* Private includes ----------------------------------------------------------*/
@@ -58,8 +59,6 @@ extern "C" {
 /* USER CODE BEGIN EM */
 
 /* USER CODE END EM */
-
-void HAL_TIM_MspPostInit(TIM_HandleTypeDef *htim);
 
 /* Exported functions prototypes ---------------------------------------------*/
 void Error_Handler(void);

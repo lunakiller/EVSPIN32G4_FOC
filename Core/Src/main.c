@@ -59,8 +59,6 @@ OPAMP_HandleTypeDef hopamp1;
 OPAMP_HandleTypeDef hopamp2;
 OPAMP_HandleTypeDef hopamp3;
 
-TIM_HandleTypeDef htim1;
-
 UART_HandleTypeDef huart1;
 
 WWDG_HandleTypeDef hwwdg;
@@ -98,6 +96,14 @@ void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef *hadc) {
   else {
     adc2_dma = true;
   }
+}
+
+void TIM1_BRK_TIM15_IRQHandler(void)
+{
+  volatile uint8_t reg = 0;
+  DRV_ReadReg(DRV_I2C_STATUS, &reg);
+  LL_TIM_ClearFlag_BRK(TIM1);
+  __BKPT();
 }
 
 void ADCs_Setup(void) {
@@ -310,8 +316,165 @@ void OPAMPs_OffsetCalibration(void) {
   for(int i = 0; i < 16; ++i) {
     mean += buffer[i];
   }
-  mean /= 16;
-  evspin.offsets.phase_v_offset = mean - 2048;
+  mean /= CS_OFFSET_CALIB_AVG;
+  evspin.offsets.phase_v_offset = mean;
+
+  return;
+}
+
+void TIM1_Setup(void) {
+  LL_TIM_InitTypeDef TIM_InitStruct = {0};
+  LL_TIM_OC_InitTypeDef TIM_OC_InitStruct = {0};
+  LL_TIM_BDTR_InitTypeDef TIM_BDTRInitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  // enable peripheral clock
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOE);
+
+  /**TIM1 GPIO Configuration
+  PE8   ------> TIM1_CH1N (DRV_INL1)
+  PE9   ------> TIM1_CH1 (DRV_INH1)
+  PE10   ------> TIM1_CH2N (DRV_INL2)
+  PE11   ------> TIM1_CH2 (DRV_INH2)
+  PE12   ------> TIM1_CH3N (DRV_INL3)
+  PE13   ------> TIM1_CH3 (DRV_INH3)
+  PE15   ------> TIM1_BKIN (DRV_nFAULT)
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_12;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  // register interrupt
+  NVIC_SetPriority(TIM1_BRK_TIM15_IRQn, NVIC_EncodePriority(NVIC_GetPriorityGrouping(),0, 0));
+  NVIC_EnableIRQ(TIM1_BRK_TIM15_IRQn);
+
+  // TIM1 configuration
+  TIM_InitStruct.Prescaler = 0;
+  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_CENTER_DOWN;
+  TIM_InitStruct.Autoreload = (170000 / (2 * SWITCHING_FREQUENCY * (TIM_InitStruct.Prescaler + 1))) - 1;
+  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  TIM_InitStruct.RepetitionCounter = 1;             // two PWM half-periods
+  LL_TIM_Init(TIM1, &TIM_InitStruct);
+  LL_TIM_EnableARRPreload(TIM1);
+  LL_TIM_CC_EnablePreload(TIM1);
+
+  // PWM mode 1:
+  //  - upcounting:   CNT < CCRx  -> CCxE high, CCxNE low   ... high-side mosfet ON
+  //                  CNT >= CCRx -> CCxE low, CCxNE high   ... low-side mosfet ON
+  //  - downcounting: CNT > CCRx  -> CCxE low, CCxNE high   ... low-side mosfet ON
+//                    CNT <= CCRx -> CCxE high, CCxNE low   ... high-side mosfet ON
+
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH1);
+  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
+  TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.OCNState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.CompareValue = 0;
+  TIM_OC_InitStruct.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCNPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCIdleState = LL_TIM_OCIDLESTATE_LOW;
+  TIM_OC_InitStruct.OCNIdleState = LL_TIM_OCIDLESTATE_LOW;
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH1);
+
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH2, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH2);
+
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH3);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH3, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH3);
+
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH4);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH4, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH4);
+
+  LL_TIM_SetTriggerOutput(TIM1, LL_TIM_TRGO_RESET);
+  LL_TIM_SetTriggerOutput2(TIM1, LL_TIM_TRGO2_RESET);
+  LL_TIM_DisableMasterSlaveMode(TIM1);
+
+  TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
+  TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
+  TIM_BDTRInitStruct.LockLevel = LL_TIM_LOCKLEVEL_OFF;
+  TIM_BDTRInitStruct.DeadTime = DEAD_TIME;
+  TIM_BDTRInitStruct.BreakState = LL_TIM_BREAK_ENABLE;
+  TIM_BDTRInitStruct.BreakPolarity = LL_TIM_BREAK_POLARITY_LOW;
+  TIM_BDTRInitStruct.BreakFilter = LL_TIM_BREAK_FILTER_FDIV1_N4;
+  TIM_BDTRInitStruct.BreakAFMode = LL_TIM_BREAK_AFMODE_INPUT;
+  TIM_BDTRInitStruct.Break2State = LL_TIM_BREAK2_DISABLE;
+  TIM_BDTRInitStruct.Break2Polarity = LL_TIM_BREAK2_POLARITY_LOW;
+  TIM_BDTRInitStruct.Break2Filter = LL_TIM_BREAK2_FILTER_FDIV1;
+  TIM_BDTRInitStruct.Break2AFMode = LL_TIM_BREAK_AFMODE_INPUT;
+  TIM_BDTRInitStruct.AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE;
+  LL_TIM_BDTR_Init(TIM1, &TIM_BDTRInitStruct);
+
+  LL_TIM_ClearFlag_BRK(TIM1);
+  LL_TIM_EnableIT_BRK(TIM1);
+
+  LL_TIM_OC_SetCompareCH1(TIM1, 0);
+  LL_TIM_OC_SetCompareCH2(TIM1, 0);
+  LL_TIM_OC_SetCompareCH3(TIM1, 0);
+  LL_TIM_OC_SetCompareCH4(TIM1, LL_TIM_GetAutoReload(TIM1) - 10);
+
+  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH4);      // enable ADC INJ trigger
+
+  LL_TIM_GenerateEvent_COM(TIM1);
+  LL_TIM_GenerateEvent_UPDATE(TIM1);
+
+  LL_TIM_EnableCounter(TIM1);
 
   return;
 }
@@ -893,71 +1056,133 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 0 */
 
-  TIM_MasterConfigTypeDef sMasterConfig = {0};
-  TIM_OC_InitTypeDef sConfigOC = {0};
-  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
+  LL_TIM_InitTypeDef TIM_InitStruct = {0};
+  LL_TIM_OC_InitTypeDef TIM_OC_InitStruct = {0};
+  LL_TIM_BDTR_InitTypeDef TIM_BDTRInitStruct = {0};
+
+  LL_GPIO_InitTypeDef GPIO_InitStruct = {0};
+
+  /* Peripheral clock enable */
+  LL_APB2_GRP1_EnableClock(LL_APB2_GRP1_PERIPH_TIM1);
+
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOE);
+  /**TIM1 GPIO Configuration
+  PE15   ------> TIM1_BKIN
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_15;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
   /* USER CODE END TIM1_Init 1 */
-  htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 0;
-  htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 65535;
-  htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim1.Init.RepetitionCounter = 0;
-  htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
-  sMasterConfig.MasterOutputTrigger2 = TIM_TRGO2_RESET;
-  sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
-  if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 0;
-  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
-  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
-  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
-  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_3) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
-  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
-  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
-  sBreakDeadTimeConfig.DeadTime = 0;
-  sBreakDeadTimeConfig.BreakState = TIM_BREAK_ENABLE;
-  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_LOW;
-  sBreakDeadTimeConfig.BreakFilter = 2;
-  sBreakDeadTimeConfig.BreakAFMode = TIM_BREAK_AFMODE_INPUT;
-  sBreakDeadTimeConfig.Break2State = TIM_BREAK2_DISABLE;
-  sBreakDeadTimeConfig.Break2Polarity = TIM_BREAK2POLARITY_LOW;
-  sBreakDeadTimeConfig.Break2Filter = 0;
-  sBreakDeadTimeConfig.Break2AFMode = TIM_BREAK_AFMODE_INPUT;
-  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
-  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  TIM_InitStruct.Prescaler = 0;
+  TIM_InitStruct.CounterMode = LL_TIM_COUNTERMODE_CENTER_DOWN;
+  TIM_InitStruct.Autoreload = 65535;
+  TIM_InitStruct.ClockDivision = LL_TIM_CLOCKDIVISION_DIV1;
+  TIM_InitStruct.RepetitionCounter = 0;
+  LL_TIM_Init(TIM1, &TIM_InitStruct);
+  LL_TIM_EnableARRPreload(TIM1);
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH1);
+  TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
+  TIM_OC_InitStruct.OCState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.OCNState = LL_TIM_OCSTATE_DISABLE;
+  TIM_OC_InitStruct.CompareValue = 0;
+  TIM_OC_InitStruct.OCPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCNPolarity = LL_TIM_OCPOLARITY_HIGH;
+  TIM_OC_InitStruct.OCIdleState = LL_TIM_OCIDLESTATE_LOW;
+  TIM_OC_InitStruct.OCNIdleState = LL_TIM_OCIDLESTATE_LOW;
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH1, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH1);
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH2, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH2);
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH3);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH3, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH3);
+  LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH4);
+  LL_TIM_OC_Init(TIM1, LL_TIM_CHANNEL_CH4, &TIM_OC_InitStruct);
+  LL_TIM_OC_DisableFast(TIM1, LL_TIM_CHANNEL_CH4);
+  LL_TIM_SetTriggerOutput(TIM1, LL_TIM_TRGO_RESET);
+  LL_TIM_SetTriggerOutput2(TIM1, LL_TIM_TRGO2_RESET);
+  LL_TIM_DisableMasterSlaveMode(TIM1);
+  TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
+  TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
+  TIM_BDTRInitStruct.LockLevel = LL_TIM_LOCKLEVEL_OFF;
+  TIM_BDTRInitStruct.DeadTime = 0;
+  TIM_BDTRInitStruct.BreakState = LL_TIM_BREAK_ENABLE;
+  TIM_BDTRInitStruct.BreakPolarity = LL_TIM_BREAK_POLARITY_LOW;
+  TIM_BDTRInitStruct.BreakFilter = LL_TIM_BREAK_FILTER_FDIV1_N4;
+  TIM_BDTRInitStruct.BreakAFMode = LL_TIM_BREAK_AFMODE_INPUT;
+  TIM_BDTRInitStruct.Break2State = LL_TIM_BREAK2_DISABLE;
+  TIM_BDTRInitStruct.Break2Polarity = LL_TIM_BREAK2_POLARITY_LOW;
+  TIM_BDTRInitStruct.Break2Filter = LL_TIM_BREAK2_FILTER_FDIV1;
+  TIM_BDTRInitStruct.Break2AFMode = LL_TIM_BREAK_AFMODE_INPUT;
+  TIM_BDTRInitStruct.AutomaticOutput = LL_TIM_AUTOMATICOUTPUT_DISABLE;
+  LL_TIM_BDTR_Init(TIM1, &TIM_BDTRInitStruct);
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
-  HAL_TIM_MspPostInit(&htim1);
+  LL_AHB2_GRP1_EnableClock(LL_AHB2_GRP1_PERIPH_GPIOE);
+  /**TIM1 GPIO Configuration
+  PE8   ------> TIM1_CH1N
+  PE9   ------> TIM1_CH1
+  PE10   ------> TIM1_CH2N
+  PE11   ------> TIM1_CH2
+  PE12   ------> TIM1_CH3N
+  PE13   ------> TIM1_CH3
+  */
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_8;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_9;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_10;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_11;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_12;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
+
+  GPIO_InitStruct.Pin = LL_GPIO_PIN_13;
+  GPIO_InitStruct.Mode = LL_GPIO_MODE_ALTERNATE;
+  GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_PUSHPULL;
+  GPIO_InitStruct.Pull = LL_GPIO_PULL_NO;
+  GPIO_InitStruct.Alternate = LL_GPIO_AF_2;
+  LL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 
 }
 
