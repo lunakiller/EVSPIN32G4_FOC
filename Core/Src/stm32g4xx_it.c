@@ -191,10 +191,11 @@ void SysTick_Handler(void)
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
   if(evspin.adc.running) {
-    evspin.adc.vdda = VREFINT_CAL_VREF * *VREFINT_CAL_ADDR / evspin.adc.buffers.ADC1_reg_raw[VREFINT_ADC1];
-    evspin.adc.vbus = evspin.adc.buffers.ADC1_reg_raw[VBUS_ADC1] * evspin.adc.vdda / 4096 * VBUS_COEFF;
+    evspin.adc.vdda = (uint32_t)VREFINT_CAL_VREF * *VREFINT_CAL_ADDR / evspin.adc.buffers.ADC1_reg_raw[VREFINT_ADC1];
+    evspin.adc.vbus = evspin.adc.buffers.ADC1_reg_raw[VBUS_ADC1] * evspin.adc.vdda / 4096.0f * VBUS_COEFF;
     evspin.adc.pot = evspin.adc.buffers.ADC2_reg_raw[POT_ADC2];
 
+    volatile int32_t tmp = evspin.adc.currents[0];
   }
 
 
