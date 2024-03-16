@@ -106,6 +106,26 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 }
 
 /**
+ * @brief Update Analog Watchdog thresholds with respect to measured VDDA
+ */
+void ADC_UpdateAWDG(void) {
+  ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
+
+  AnalogWDGConfig.WatchdogNumber = ADC_ANALOGWATCHDOG_1;
+  AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
+  AnalogWDGConfig.Channel = ADC_CHANNEL_1;
+  AnalogWDGConfig.ITMode = ENABLE;
+  AnalogWDGConfig.HighThreshold = OVERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096.0f / evspin.adc.vdda;
+  AnalogWDGConfig.LowThreshold = UNDERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096.0f / evspin.adc.vdda;
+  AnalogWDGConfig.FilteringConfig = ADC_AWD_FILTERING_NONE;
+  if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK) {
+    Error_Handler();
+  }
+
+  return;
+}
+
+/**
  * @brief Setup ADCs for FOC.
  */
 void ADCs_Setup(void) {
@@ -147,8 +167,8 @@ void ADCs_Setup(void) {
   AnalogWDGConfig.WatchdogMode = ADC_ANALOGWATCHDOG_SINGLE_REG;
   AnalogWDGConfig.Channel = ADC_CHANNEL_1;
   AnalogWDGConfig.ITMode = ENABLE;
-  AnalogWDGConfig.HighThreshold = OVERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096 / 3.3f;
-  AnalogWDGConfig.LowThreshold = UNDERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096 / 3.3f;
+  AnalogWDGConfig.HighThreshold = OVERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096.0f / 3.3f;
+  AnalogWDGConfig.LowThreshold = UNDERVOLTAGE_THRESHOLD * (1.0f / VBUS_COEFF) * 4096.0f / 3.3f;
   AnalogWDGConfig.FilteringConfig = ADC_AWD_FILTERING_NONE;
   if (HAL_ADC_AnalogWDGConfig(&hadc1, &AnalogWDGConfig) != HAL_OK) {
     Error_Handler();

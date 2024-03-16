@@ -16,6 +16,7 @@
 // Protections
 #define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in V
 #define OVERVOLTAGE_THRESHOLD       ((uint8_t)  15)                 // overvoltage protection threshold in V
+#define SW_OVERCURRENT_THRESHOLD    ((uint16_t) 1000)               // overcurrent protection threshold in mA
 
 // VBUS divider
 #define VBUS_R_VtoADC               ((uint32_t) 72300)              // resistor between VM and ADC input in Ohms
