@@ -6,11 +6,11 @@
  *
  */
 
-#ifndef __IRQ_HANDLERS_H
-#define __IRQ_HANDLERS_H
+#ifndef __FOC_HANDLERS_H
+#define __FOC_HANDLERS_H
 
 
 void ADC1_2_IRQHandler(void);
 
 
-#endif /* __IRQ_HANDLERS_H */
+#endif /* __FOC_HANDLERS_H */

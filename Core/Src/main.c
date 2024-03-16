@@ -22,10 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <stdbool.h>
-#include "settings.h"
-#include "typedefs.h"
-#include "stspin32g4.h"
-#include "IRQ_handlers.h"
+#include "foc_motorcontrol.h"
 
 #include "swo_debug.h"
 /* USER CODE END Includes */
@@ -103,9 +100,14 @@ void TIM1_BRK_TIM15_IRQHandler(void)
   volatile uint8_t reg = 0;
   DRV_ReadReg(DRV_I2C_STATUS, &reg);
   LL_TIM_ClearFlag_BRK(TIM1);
-  __BKPT();
+
+  LL_TIM_DisableAllOutputs(TIM1);     // just in case
+  __NOP();
 }
 
+/**
+ * @brief Setup ADCs for FOC.
+ */
 void ADCs_Setup(void) {
   ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
   ADC_ChannelConfTypeDef sConfig = {0};
@@ -518,7 +520,7 @@ void TIM1_Setup(void) {
   //  - upcounting:   CNT < CCRx  -> CCxE high, CCxNE low   ... high-side mosfet ON
   //                  CNT >= CCRx -> CCxE low, CCxNE high   ... low-side mosfet ON
   //  - downcounting: CNT > CCRx  -> CCxE low, CCxNE high   ... low-side mosfet ON
-//                    CNT <= CCRx -> CCxE high, CCxNE low   ... high-side mosfet ON
+  //                  CNT <= CCRx -> CCxE high, CCxNE low   ... high-side mosfet ON
 
   LL_TIM_OC_EnablePreload(TIM1, LL_TIM_CHANNEL_CH1);
   TIM_OC_InitStruct.OCMode = LL_TIM_OCMODE_PWM1;
@@ -571,8 +573,6 @@ void TIM1_Setup(void) {
   LL_TIM_OC_SetCompareCH3(TIM1, 0);
   LL_TIM_OC_SetCompareCH4(TIM1, LL_TIM_GetAutoReload(TIM1) - 10);
 
-  LL_TIM_CC_EnableChannel(TIM1, LL_TIM_CHANNEL_CH4);      // enable ADC INJ trigger
-
   LL_TIM_GenerateEvent_COM(TIM1);
   LL_TIM_GenerateEvent_UPDATE(TIM1);
 
@@ -598,6 +598,7 @@ void EVSPIN32G4_Init(void) {
   ADCs_Setup();
   DEBUG_printf("ADCs self-calibrated and running!\r\n");
 
+  // Main timer
   TIM1_Setup();
   DEBUG_printf("Main timer initialized!\r\n");
 

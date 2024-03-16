@@ -10,6 +10,7 @@
 #define __TYPEDEFS_H
 
 #include "settings.h"
+#include <stdint.h>
 #include <stdbool.h>
 
 

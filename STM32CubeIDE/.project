@@ -207,9 +207,14 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STSPIN32G4/stspin32g4.c</locationURI>
 		</link>
 		<link>
-			<name>Application/User/Core/IRQ_handlers.c</name>
+			<name>Application/User/Core/foc_handlers.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/IRQ_handlers.c</locationURI>
+			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_handlers.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/foc_tasks.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_tasks.c</locationURI>
 		</link>
 		<link>
 			<name>Application/User/Core/main.c</name>

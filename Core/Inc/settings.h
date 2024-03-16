@@ -14,8 +14,8 @@
 #define DEAD_TIME                   ((uint8_t)  40)                 // DEAD_TIME*5.9 = deadtime in ns
 
 // Protections
-#define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in Volts
-#define OVERVOLTAGE_THRESHOLD       ((uint8_t)  15)                 // overvoltage protection threshold in Volts
+#define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in V
+#define OVERVOLTAGE_THRESHOLD       ((uint8_t)  15)                 // overvoltage protection threshold in V
 
 // VBUS divider
 #define VBUS_R_VtoADC               ((uint32_t) 72300)              // resistor between VM and ADC input in Ohms
