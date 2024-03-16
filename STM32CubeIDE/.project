@@ -236,5 +236,30 @@
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/swo_debug.c</locationURI>
 		</link>
+		<link>
+			<name>Drivers/CMSIS/DSP/BasicMathFunctions.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/BasicMathFunctions/BasicMathFunctions.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/CMSIS/DSP/CommonTables.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/CommonTables/CommonTables.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/CMSIS/DSP/ControllerFunctions.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/ControllerFunctions/ControllerFunctions.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/CMSIS/DSP/FastMathFunctions.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/FastMathFunctions/FastMathFunctions.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/CMSIS/DSP/FilteringFunctions.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/FilteringFunctions/FilteringFunctions.c</locationURI>
+		</link>
 	</linkedResources>
 </projectDescription>

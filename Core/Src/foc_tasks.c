@@ -7,6 +7,7 @@
  */
 
 #include "foc_motorcontrol.h"
+#include "arm_math.h"
 
 // TODO pass a pointer?
 extern Board_Settings_t evspin;
