@@ -11,6 +11,8 @@
 #ifndef __FOC_MOTORCONTROL_H
 #define __FOC_MOTORCONTROL_H
 
+#include "arm_math.h"
+
 #include "settings.h"
 #include "typedefs.h"
 #include "foc_tasks.h"

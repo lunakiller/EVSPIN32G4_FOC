@@ -9,7 +9,7 @@
 #ifndef __TYPEDEFS_H
 #define __TYPEDEFS_H
 
-#include "settings.h"
+#include "foc_motorcontrol.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -45,6 +45,21 @@ typedef struct {
 //} Phase_Current_t;
 
 typedef struct {
+  arm_pid_instance_f32 Id_pid;
+  arm_pid_instance_f32 Iq_pid;
+  float Id_target, Iq_target;
+} PID_t;
+
+typedef struct {
+  PID_t pid;
+  float Ialpha, Ibeta;
+  float Id, Iq;
+  float Vd, Vq;
+  float Valpha, Vbeta;
+  uint32_t phU, phV, phW;
+} FOC_t;
+
+typedef struct {
   ADC_Buffer_t buffers;
   int32_t currents[3];      // current in mA
   uint32_t vbus;            // Vbus in mV
@@ -57,6 +72,7 @@ typedef struct {
 typedef struct {
   ADC_Data_t adc;           // ADC data
   CS_Offset_t offsets;      // current sensing offsets
+  FOC_t foc;
 } Board_Settings_t;
 
 
