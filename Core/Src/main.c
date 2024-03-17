@@ -106,7 +106,7 @@ void TIM1_BRK_TIM15_IRQHandler(void)
 }
 
 /**
- * @brief Update Analog Watchdog thresholds with respect to measured VDDA
+ * @brief Update Analog Watchdog thresholds with respect to measured VDDA.
  */
 void ADC_UpdateAWDG(void) {
   ADC_AnalogWDGConfTypeDef AnalogWDGConfig = {0};
@@ -318,6 +318,9 @@ void ADCs_Setup(void) {
   return;
 }
 
+/**
+ * @brief Self-calibrate and start OPAMPs.
+ */
 void OPAMPs_Setup(void) {
   HAL_OPAMPEx_SelfCalibrateAll(&hopamp1, &hopamp2, &hopamp3);
   HAL_OPAMP_Start(&hopamp1);
@@ -327,6 +330,9 @@ void OPAMPs_Setup(void) {
   return;
 }
 
+/**
+ * @brief Calibrate current offset by measuring ADC voltage with no current.
+ */
 void OPAMPs_OffsetCalibration(void) {
   uint16_t buffer[CS_OFFSET_CALIB_AVG] = {0};
   uint32_t mean;
@@ -446,6 +452,9 @@ void OPAMPs_OffsetCalibration(void) {
   return;
 }
 
+/**
+ * @brief Setup the main timer for PWM and ADC trigger.
+ */
 void TIM1_Setup(void) {
   LL_TIM_InitTypeDef TIM_InitStruct = {0};
   LL_TIM_OC_InitTypeDef TIM_OC_InitStruct = {0};
@@ -601,6 +610,9 @@ void TIM1_Setup(void) {
   return;
 }
 
+/**
+ * @brief Initialize EVSPIN32G4 board.
+ */
 void EVSPIN32G4_Init(void) {
   // initialize gate driver
   if(DRV_Init() != DRV_OK)

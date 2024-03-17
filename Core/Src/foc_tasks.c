@@ -18,6 +18,7 @@ void FOC_Task(void) {
   evspin.adc.currents[1] = (evspin.adc.buffers.ADC2_inj_raw[0] - evspin.offsets.phase_v_offset) * evspin.adc.vdda / 4096.0f / (CS_GAIN * CS_SHUNT_VALUE);
   evspin.adc.currents[2] = (evspin.adc.buffers.ADC1_inj_raw[1] - evspin.offsets.phase_w_offset) * evspin.adc.vdda / 4096.0f / (CS_GAIN * CS_SHUNT_VALUE);
 
+  // overcurrent
   if(evspin.adc.currents[0] > SW_OVERCURRENT_THRESHOLD || evspin.adc.currents[1] > SW_OVERCURRENT_THRESHOLD || evspin.adc.currents[2] > SW_OVERCURRENT_THRESHOLD) {
     LL_TIM_DisableAllOutputs(TIM1);
     // TODO error status

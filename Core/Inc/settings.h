@@ -11,7 +11,13 @@
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  50)                 // switching frequency in kHz
-#define DEAD_TIME                   ((uint8_t)  40)                 // DEAD_TIME*5.9 = deadtime in ns
+#define DEAD_TIME                   ((uint8_t)  40)                 // DEAD_TIME*5.9 = deadtime in ns   // TODO check RM
+
+// Motor parameters
+#define MOTOR_POLEPAIRS             ((uint8_t)  7)
+
+// Encoder parameters
+#define ENCODER_PULSES              ((uint16_t) 1024)
 
 // Protections
 #define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in V
