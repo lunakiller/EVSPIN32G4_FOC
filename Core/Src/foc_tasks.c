@@ -7,11 +7,38 @@
  */
 
 #include "foc_motorcontrol.h"
-#include "arm_math.h"
 
 // TODO pass a pointer?
 extern Board_Settings_t evspin;
 
+
+
+/**
+ * @brief Sinusoidal-PWM modulator function.
+ * @param Valpha Alpha voltage in alpha-beta coordinates.
+ * @param Vbeta Beta voltage in alpha-beta coordinates.
+ * @param Va CCRx register value representing phase A voltage.
+ * @param Vb CCRx register value representing phase B voltage.
+ * @param Vc CCRx register value representing phase C voltage.
+ */
+void FOC_Modulator(float Valpha, float Vbeta, uint32_t* Va, uint32_t* Vb, uint32_t* Vc) {
+  float tmpA, tmpB, tmpC;
+  arm_inv_clarke_f32(Valpha, Vbeta, &tmpA, &tmpB);
+  tmpC = -(tmpA + tmpB);
+
+  // TODO deadtime compensation?
+  // TODO limitation
+
+  *Va = tmpA * LL_TIM_GetAutoReload(TIM1) / (2 * evspin.adc.vbus) + (LL_TIM_GetAutoReload(TIM1) / 2);
+  *Vb = tmpB * LL_TIM_GetAutoReload(TIM1) / (2 * evspin.adc.vbus) + (LL_TIM_GetAutoReload(TIM1) / 2);
+  *Vc = tmpC * LL_TIM_GetAutoReload(TIM1) / (2 * evspin.adc.vbus) + (LL_TIM_GetAutoReload(TIM1) / 2);
+
+  return;
+}
+
+/**
+ * @brief Main FOC task.
+ */
 void FOC_Task(void) {
   // TODO compute on of the currents
   evspin.adc.currents[0] = (evspin.adc.buffers.ADC1_inj_raw[0] - evspin.offsets.phase_u_offset) * evspin.adc.vdda / 4096.0f / (CS_GAIN * CS_SHUNT_VALUE);

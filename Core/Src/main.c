@@ -636,6 +636,8 @@ void EVSPIN32G4_Init(void) {
 
   return;
 }
+
+#include "dsp/controller_functions.h"
 /* USER CODE END 0 */
 
 /**
@@ -693,6 +695,22 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+    for(int angle = -1800; angle < 1800; ++angle) {
+      float sin, cos;
+      arm_sin_cos_f32(angle/10, &sin, &cos);
+
+      float Valpha, Vbeta;
+      arm_inv_park_f32(0, 8000, &Valpha, &Vbeta, sin, cos);
+
+      FOC_Modulator(Valpha, Vbeta, &evspin.foc.phU, &evspin.foc.phV, &evspin.foc.phW);
+
+      LL_TIM_OC_SetCompareCH1(TIM1, evspin.foc.phU);
+      LL_TIM_OC_SetCompareCH2(TIM1, evspin.foc.phV);
+      LL_TIM_OC_SetCompareCH3(TIM1, evspin.foc.phW);
+      LL_TIM_GenerateEvent_UPDATE(TIM1);
+
+      HAL_Delay(1);
+    }
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
