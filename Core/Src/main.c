@@ -634,6 +634,16 @@ void EVSPIN32G4_Init(void) {
   TIM1_Setup();
   DEBUG_printf("Main timer initialized!\r\n");
 
+  // TODO set Ki, Kp
+//  evspin.foc.Id_pid.Ki = ;
+//  evspin.foc.Id_pid.Kp = ;
+//  evspin.foc.Id_pid.Kd = 0;
+//  evspin.foc.Iq_pid.Ki = ;
+//  evspin.foc.Iq_pid.Kp = ;
+//  evspin.foc.Iq_pid.Kd = 0;
+  arm_pid_init_f32(&evspin.foc.pid.Id_pid, 1);
+  arm_pid_init_f32(&evspin.foc.pid.Iq_pid, 1);
+
   return;
 }
 

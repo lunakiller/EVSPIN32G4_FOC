@@ -55,4 +55,33 @@ void FOC_Task(void) {
   int32_t localCurrV = evspin.adc.currents[1];
   int32_t localCurrW = evspin.adc.currents[2];
 
+  /* DRAFT */
+//  // TODO compute angle
+//
+//  float sin, cos;
+//  float angle = 0;
+//  arm_sin_cos_f32(angle, &sin, &cos);
+//
+//  // Clarke transform
+//  arm_clarke_f32(localCurrU, localCurrV, &evspin.foc.Ialpha, &evspin.foc.Ibeta);
+//
+//  // Park transform
+//  arm_park_f32(evspin.foc.Ialpha, evspin.foc.Ibeta, &evspin.foc.Id, &evspin.foc.Iq, sin, cos);
+//
+//  // PID regulators
+//  evspin.foc.Vd = arm_pid_f32(&evspin.foc.pid.Id_pid, evspin.foc.pid.Id_target - evspin.foc.Id);
+//  evspin.foc.Vq = arm_pid_f32(&evspin.foc.pid.Iq_pid, evspin.foc.pid.Iq_target - evspin.foc.Iq);
+//
+//  // TODO circle limitation
+//
+//  // inverse Park transform
+//  arm_inv_park_f32(evspin.foc.Vd, evspin.foc.Vq, &evspin.foc.Valpha, &evspin.foc.Vbeta, sin, cos);
+//
+//  FOC_Modulator(evspin.foc.Valpha, evspin.foc.Vbeta, &evspin.foc.phU, &evspin.foc.phV, &evspin.foc.phW);
+//
+//  LL_TIM_OC_SetCompareCH1(TIM1, evspin.foc.phU);
+//  LL_TIM_OC_SetCompareCH2(TIM1, evspin.foc.phV);
+//  LL_TIM_OC_SetCompareCH3(TIM1, evspin.foc.phW);
+//  LL_TIM_GenerateEvent_UPDATE(TIM1);
+
 }
