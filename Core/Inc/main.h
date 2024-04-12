@@ -126,6 +126,12 @@ void Error_Handler(void);
 #define DBG_SWCLK_GPIO_Port GPIOA
 #define DBG_SWO_Pin GPIO_PIN_3
 #define DBG_SWO_GPIO_Port GPIOB
+#define ENC_CH1_Pin GPIO_PIN_6
+#define ENC_CH1_GPIO_Port GPIOB
+#define ENC_CH2_Pin GPIO_PIN_7
+#define ENC_CH2_GPIO_Port GPIOB
+#define ENC_INDEX_Pin GPIO_PIN_8
+#define ENC_INDEX_GPIO_Port GPIOB
 
 /* USER CODE BEGIN Private defines */
 

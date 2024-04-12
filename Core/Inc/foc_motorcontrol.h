@@ -13,13 +13,14 @@
 
 #include "arm_math.h"
 
-#include "settings.h"
-#include "typedefs.h"
-#include "foc_tasks.h"
-#include "foc_handlers.h"
-
 #include "stspin32g4.h"
 #include "main.h"
+
+#include "settings.h"
+#include "typedefs.h"
+#include "foc_functions.h"
+#include "foc_tasks.h"
+#include "foc_handlers.h"
 
 
 #endif /* __FOC_MOTORCONTROL_H */

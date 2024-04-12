@@ -22,7 +22,7 @@
 #include "stm32g4xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "typedefs.h"
+#include "foc_motorcontrol.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -190,16 +190,7 @@ void SysTick_Handler(void)
   /* USER CODE END SysTick_IRQn 0 */
   HAL_IncTick();
   /* USER CODE BEGIN SysTick_IRQn 1 */
-  if(evspin.adc.running) {
-    evspin.adc.vdda = (uint32_t)VREFINT_CAL_VREF * *VREFINT_CAL_ADDR / evspin.adc.buffers.ADC1_reg_raw[VREFINT_ADC1];
-    evspin.adc.vbus = evspin.adc.buffers.ADC1_reg_raw[VBUS_ADC1] * evspin.adc.vdda / 4096.0f * VBUS_COEFF;
-    evspin.adc.pot = evspin.adc.buffers.ADC2_reg_raw[POT_ADC2];
-
-    volatile int32_t tmp = evspin.adc.currents[0];
-  }
-
-
-  HAL_WWDG_Refresh(&hwwdg);
+  FOC_SystickScheduler();
   /* USER CODE END SysTick_IRQn 1 */
 }
 

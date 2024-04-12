@@ -10,8 +10,8 @@
 #define __SETTINGS_H
 
 // General
-#define SWITCHING_FREQUENCY         ((uint8_t)  50)                 // switching frequency in kHz
-#define DEAD_TIME                   ((uint8_t)  40)                 // DEAD_TIME*5.9 = deadtime in ns   // TODO check RM
+#define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
+#define DEAD_TIME                   ((uint16_t) 300)               // deadtime in ns
 
 // Motor parameters
 #define MOTOR_POLEPAIRS             ((uint8_t)  7)
@@ -22,12 +22,41 @@
 // Protections
 #define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in V
 #define OVERVOLTAGE_THRESHOLD       ((uint8_t)  15)                 // overvoltage protection threshold in V
-#define SW_OVERCURRENT_THRESHOLD    ((uint16_t) 1000)               // overcurrent protection threshold in mA
+#define SW_OVERCURRENT_THRESHOLD    ((uint16_t) 2000)               // overcurrent protection threshold in mA
+
+// Bootstrap charging phase settings
+#define BOOTSTRAP_TIME              ((uint16_t) 250)                // time to charge bootstrap capacitors in ms
+
+// Alignment phase settings
+#define ALIGNMENT_TIME              ((uint16_t) 1000)               // alignment phase length in ms
+#define ALIGNMENT_CURRENT           ((uint16_t) 1000)               // d-axis current used to align the rotor in mA
+#define ALIGNMENT_ANGLE             ((int16_t)  90)                 // alignment electrical angle [-180  179]
+
+#define STARTUP_CURRENT             ((uint16_t) 1000)               // d-axis current uapplied to start rotating in mA
+// moving average filter
+#define FILTER_LENGTH               ((uint8_t)  32)                 // length of the moving average filter
+
+// speed PID
+#define PID_SPEED_KP                ((float)    1)
+#define PID_SPEED_KI                ((float)    0.02)
+#define PID_SPEED_KD                ((float)    0)
+#define PID_SPEED_LIMIT             ((float)    1000)        // TODO
+
+// D-Q current PIDs
+#define PID_CURRENT_KP							((float)    1)
+#define PID_CURRENT_KI							((float)    0.1)
+#define PID_CURRENT_KD							((float)    0)
+#define PID_CURRENT_LIMIT						((float)    10000)				// TODO
 
 // VBUS divider
 #define VBUS_R_VtoADC               ((uint32_t) 72300)              // resistor between VM and ADC input in Ohms
 #define VBUS_R_ADCtoGND             ((uint32_t) 3010)               // resistor between ADC input and GND in Ohms
 #define VBUS_COEFF                  ((float)    _VBUS_COEFF)        // coefficient to compute VBUS from ADC
+
+// Applied motor voltage divider
+#define VMOT_R_VtoADC               ((uint32_t) 95000)              // resistor between VM and ADC input in Ohms
+#define VMOT_R_ADCtoGND             ((uint32_t) 3900)               // resistor between ADC input and GND in Ohms
+#define VMOT_COEFF                  ((float)    _VMOT_COEFF)        // coefficient to compute applied voltages from ADC
 
 // Current sensing
 #define CS_SHUNT_VALUE              ((float)    0.005)              // shunt in Ohms
@@ -60,6 +89,7 @@
 /* automatic computations */
 #define _CS_GAIN                    ((float)CS_R_OPNtoOPO / (float)CS_R_SHUNTNtoOPN)
 #define _VBUS_COEFF                 ((float)(VBUS_R_VtoADC + VBUS_R_ADCtoGND) / (float)(VBUS_R_ADCtoGND))
+#define _VMOT_COEFF                 ((float)(VMOT_R_VtoADC + VMOT_R_ADCtoGND) / (float)(VMOT_R_ADCtoGND))
 
 
 #endif  /* __SETTINGS_H */

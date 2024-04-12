@@ -42,7 +42,8 @@ DRV_StatusTypeDef DRV_Init(void) {
   if(DRV_Unlock() != DRV_OK)
     return DRV_ERROR;
   // set VCC value
-  if(DRV_SetVCC(DRV_I2C_POWMNG_VCC_VAL_0) != DRV_OK)        // VCC reg output 10V
+//  if(DRV_SetVCC(DRV_I2C_POWMNG_VCC_VAL_0) != DRV_OK)        // VCC reg output 10V
+  if(DRV_SetVCC(0x0) != DRV_OK)                               // VCC reg output 8V
     return DRV_ERROR;
   // set deglitch value
   if(DRV_SetDeglitch(DRV_I2C_LOGIC_VDS_P_DEG_0) != DRV_OK)  // deglitch 4us
