@@ -25,6 +25,7 @@ void FOC_ChargeBootstraps(void);
 void FOC_AlignRotor(void);
 void FOC_EncoderProcessing(void);
 void FOC_SpeedControl(void);
+void FOC_RunTask(void);
 void FOC_MainControl(void);
 void FOC_Modulator(float Valpha, float Vbeta, int32_t* Va, int32_t* Vb, int32_t* Vc);
 

@@ -121,6 +121,16 @@ typedef struct {
 } FOC_Base_t;
 
 typedef struct {
+  int32_t speed_target;
+  int32_t speed;
+  int32_t ramp_final;
+  int32_t ramp_duration;
+  bool activate_ramp;
+  int32_t _ramp_initial;
+  float _ramp_elapsed;
+} FOC_Run_t;
+
+typedef struct {
   ADC_HandleTypeDef* adc1;
   ADC_HandleTypeDef* adc2;
   DMA_HandleTypeDef* dma_adc1;
@@ -141,6 +151,7 @@ typedef struct {
 typedef struct {
   FOC_State_t state;
   FOC_Base_t base;
+  FOC_Run_t run;
   FOC_t foc;
   FOC_Encoder_t enc;
   ADC_Data_t adc;           // ADC data

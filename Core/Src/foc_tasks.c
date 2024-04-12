@@ -191,6 +191,10 @@ void FOC_AlignRotor(void) {
       evspin.base.alignment_active = false;
       evspin.state = STATE_RUN;
     }
+    else if(elapsed < (ALIGNMENT_TIME / 2)) {
+      evspin.foc.Id_pid.target = ALIGNMENT_CURRENT;
+      evspin.foc.Id_pid.target = FOC_LinearRamp(0, ALIGNMENT_CURRENT, (ALIGNMENT_TIME/2), elapsed);
+    }
   }
   else {
     evspin.base.clock = HAL_GetTick();
@@ -278,6 +282,32 @@ void FOC_SpeedControl(void) {
   evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.enc.speed_filtered);
 
   evspin.run.speed_target = evspin.foc.speed_pid.target;
+}
+
+void FOC_RunTask(void) {
+  if(evspin.run.activate_ramp == true) {
+    if(evspin.base.speed_ramp_active == false) {
+      evspin.run._ramp_initial = evspin.run.speed_target;
+      evspin.run._ramp_elapsed = 0;
+
+      evspin.base.speed_ramp_active = true;
+    }
+    else {
+      evspin.run._ramp_elapsed += 1;
+
+      if(evspin.run._ramp_elapsed == evspin.run.ramp_duration) {
+        evspin.foc.speed_pid.target = evspin.run.ramp_final;
+
+        evspin.base.speed_ramp_active = false;
+        evspin.run.activate_ramp = false;
+      }
+      else {
+        evspin.foc.speed_pid.target = FOC_LinearRamp(evspin.run._ramp_initial, evspin.run.ramp_final, evspin.run.ramp_duration, evspin.run._ramp_elapsed);
+      }
+    }
+  }
+
+  evspin.base.run_active = true;      // TODO ne tak casto
 }
 
 /**
