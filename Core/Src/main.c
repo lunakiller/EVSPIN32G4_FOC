@@ -686,9 +686,9 @@ int main(void)
   MX_OPAMP3_Init();
   /* USER CODE BEGIN 2 */
 //  MX_WWDG_Init();
-  DEBUG_printf("--- SWO init\r\n");
+  DEBUG_print("--- SWO init\r\n");
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
-  DEBUG_printf("STSPIN32G4 initialized!\r\n");
+  DEBUG_print("STSPIN32G4 initialized!\r\n");
 
   // init board
   EVSPIN32G4_Init();
