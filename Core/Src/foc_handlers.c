@@ -56,6 +56,7 @@ void ADC1_2_IRQHandler(void) {
       break;
     case STATE_STARTUP:
 //      FOC_EncoderProcessing();
+      FOC_OpenLoop_StartUp();
       FOC_MainControl();
       break;
     case STATE_SYNCHRO:

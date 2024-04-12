@@ -121,6 +121,13 @@ typedef struct {
 } FOC_Base_t;
 
 typedef struct {
+  float accel_rate;
+  float actual_speed;
+  float angle_increment;
+  float elapsed_time_ms;
+} FOC_OpenLoop_t;
+
+typedef struct {
   int32_t speed_target;
   int32_t speed;
   int32_t ramp_final;
@@ -153,6 +160,7 @@ typedef struct {
   FOC_Base_t base;
   FOC_Run_t run;
   FOC_t foc;
+  FOC_OpenLoop_t open;
   FOC_Encoder_t enc;
   ADC_Data_t adc;           // ADC data
   FOC_Periph_t periph;

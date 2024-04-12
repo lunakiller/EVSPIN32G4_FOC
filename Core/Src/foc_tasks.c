@@ -189,7 +189,11 @@ void FOC_AlignRotor(void) {
       evspin.foc.Iq_pid.target = STARTUP_CURRENT;
 
       evspin.base.alignment_active = false;
-      evspin.state = STATE_RUN;
+      #if SENSORLESS == 1 || OPENLOOP_START == 1
+        evspin.state = STATE_STARTUP;
+      #else
+        evspin.state = STATE_RUN;
+      #endif
     }
     else if(elapsed < (ALIGNMENT_TIME / 2)) {
       evspin.foc.Id_pid.target = ALIGNMENT_CURRENT;
@@ -282,6 +286,36 @@ void FOC_SpeedControl(void) {
   evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.enc.speed_filtered);
 
   evspin.run.speed_target = evspin.foc.speed_pid.target;
+}
+
+void FOC_OpenLoop_StartUp(void) {
+  if(evspin.base.startup_active == true) {
+    evspin.open.elapsed_time_ms = HAL_GetTick() - evspin.base.clock;
+    if(evspin.open.elapsed_time_ms < STARTUP_TIME) {
+      evspin.open.actual_speed = evspin.open.accel_rate * evspin.open.elapsed_time_ms;
+
+      evspin.open.angle_increment = evspin.open.actual_speed * 360.0f / 60.0f * _SWITCHING_PERIOD_MS / 1000.0f;
+      evspin.foc.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
+
+      // limit angle to the range [0, 360]
+      if(evspin.foc.angle >= 360.0f) {
+        evspin.foc.angle -= 360.0f;
+      }
+    }
+    else {
+      evspin.base.startup_active = false;
+      evspin.state = STATE_SYNCHRO;
+    }
+  }
+  else {
+    evspin.base.clock = HAL_GetTick();
+    evspin.base.startup_active = true;
+
+    evspin.open.accel_rate = (float)STARTUP_SPEED / (float)STARTUP_TIME;      // rad/ms
+    evspin.open.elapsed_time_ms = 0;
+
+//    evspin.foc.angle = ALIGNMENT_ANGLE;
+  }
 }
 
 void FOC_RunTask(void) {

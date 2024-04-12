@@ -9,6 +9,10 @@
 #ifndef __SETTINGS_H
 #define __SETTINGS_H
 
+
+#define SENSORLESS                  (0)                            // 1 - Sensroless, 0 - Encoder
+#define OPENLOOP_START              (1)                            // 1 - enable open-loop start-up, 0 - disable
+
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
 #define DEAD_TIME                   ((uint16_t) 300)               // deadtime in ns
@@ -33,6 +37,13 @@
 #define ALIGNMENT_ANGLE             ((int16_t)  90)                 // alignment electrical angle [-180  179]
 
 #define STARTUP_CURRENT             ((uint16_t) 1000)               // d-axis current uapplied to start rotating in mA
+//#if OPENLOOP_START == 1
+#define STARTUP_TIME                ((uint16_t) 1000)               // startup phase length in ms
+#define STARTUP_SPEED               ((uint16_t) 500)
+//#endif
+
+#define SYNCHRONIZATION_TIME        ((uint16_t) 1000)               // position synchronization phase length in ms
+
 // moving average filter
 #define FILTER_LENGTH               ((uint8_t)  32)                 // length of the moving average filter
 
@@ -90,6 +101,7 @@
 #define _CS_GAIN                    ((float)CS_R_OPNtoOPO / (float)CS_R_SHUNTNtoOPN)
 #define _VBUS_COEFF                 ((float)(VBUS_R_VtoADC + VBUS_R_ADCtoGND) / (float)(VBUS_R_ADCtoGND))
 #define _VMOT_COEFF                 ((float)(VMOT_R_VtoADC + VMOT_R_ADCtoGND) / (float)(VMOT_R_ADCtoGND))
+#define _SWITCHING_PERIOD_MS        (1.0f / (float)SWITCHING_FREQUENCY)
 
 
 #endif  /* __SETTINGS_H */
