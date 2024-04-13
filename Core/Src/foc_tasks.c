@@ -9,6 +9,7 @@
 #include "foc_motorcontrol.h"
 
 #include "swo_debug.h"
+#include <stdlib.h>
 
 // TODO pass a pointer?
 extern Board_Settings_t evspin;
@@ -112,11 +113,10 @@ void FOC_SystickScheduler(void) {
     evspin.dbg.voltage_w = evspin.adc.buffers.ADC2_reg_raw[W_ADC2] * evspin.adc.vdda / 4096.0f * VMOT_COEFF;
 
     // TODO DEBUG - generate read events for trace
-    volatile int32_t tmp = evspin.enc.speed_filtered;
-    volatile float tmp2 = evspin.enc.speed;
-    volatile int32_t tmp3 = evspin.enc.mech_pos_diff;
-//    volatile float tmp4 = evspin.dbg.tmp;
-    evspin.dbg.tmp = evspin.enc.el_position * evspin.enc.cnt_to_deg;
+    evspin.dbg.tmp[0] = evspin.foc.angle;
+    evspin.dbg.tmp[1] = evspin.enc.angle;
+    evspin.dbg.tmp[2] = evspin.foc.Iq;
+    evspin.dbg.tmp[3] = evspin.enc.speed_filtered;
   }
 
 
@@ -133,10 +133,10 @@ void FOC_SystickScheduler(void) {
     FOC_AlignRotor();
     break;
   case STATE_STARTUP:
-    FOC_SpeedControl();
+//    FOC_SpeedControl();
     break;
   case STATE_SYNCHRO:
-    FOC_SpeedControl();
+//    FOC_SpeedControl();
     break;
   case STATE_RUN:
     FOC_SpeedControl();
@@ -234,7 +234,9 @@ void FOC_EncoderProcessing(void) {
   }
 
   if(mech_pos_diff < -(ENCODER_PULSES/2) || mech_pos_diff > (ENCODER_PULSES/2)) {
-    DEBUG_Breakpoint();
+//    DEBUG_Breakpoint();
+    DEBUG_print("DIFF\r\n");
+    mech_pos_diff = 0;
   }
 
   evspin.enc.speed = (float)mech_pos_diff * (SWITCHING_FREQUENCY * 1000) * 60.0f / (ENCODER_PULSES * 2);
@@ -246,8 +248,15 @@ void FOC_EncoderProcessing(void) {
   evspin.enc.mech_position = act_mech_pos;
   evspin.enc.el_position = act_mech_pos * MOTOR_POLEPAIRS;
 
+  evspin.enc.angle = evspin.enc.el_position * evspin.enc.cnt_to_deg;
+
+  // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
+  if(evspin.enc.angle >= 180.0f * MOTOR_POLEPAIRS) {
+    evspin.enc.angle -= 360.0f * MOTOR_POLEPAIRS;
+  }
+
   if(evspin.dbg.open_loop_enable == false) {
-    evspin.foc.angle = evspin.enc.el_position * evspin.enc.cnt_to_deg;
+//    evspin.foc.angle = evspin.enc.angle;
   }
 
   if(evspin.enc.speed_filtered > 2000) {
@@ -295,11 +304,11 @@ void FOC_OpenLoop_StartUp(void) {
       evspin.open.actual_speed = evspin.open.accel_rate * evspin.open.elapsed_time_ms;
 
       evspin.open.angle_increment = evspin.open.actual_speed * 360.0f / 60.0f * _SWITCHING_PERIOD_MS / 1000.0f;
-      evspin.foc.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
+      evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
 
-      // limit angle to the range [0, 360]
-      if(evspin.foc.angle >= 360.0f) {
-        evspin.foc.angle -= 360.0f;
+      // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
+      if(evspin.open.angle >= 180.0f * MOTOR_POLEPAIRS) {
+        evspin.open.angle -= 360.0f * MOTOR_POLEPAIRS;
       }
     }
     else {
@@ -315,6 +324,38 @@ void FOC_OpenLoop_StartUp(void) {
     evspin.open.elapsed_time_ms = 0;
 
 //    evspin.foc.angle = ALIGNMENT_ANGLE;
+  }
+}
+
+void FOC_PositionSynchronization(void) {
+  if(evspin.base.synchro_active == true) {
+    if(HAL_GetTick() - evspin.base.clock < STARTUP_TIME) {
+      evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
+
+      // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
+      if(evspin.open.angle >= 180.0f * MOTOR_POLEPAIRS) {
+        evspin.open.angle -= 360.0f * MOTOR_POLEPAIRS;
+      }
+
+      if((abs((int)evspin.enc.angle - (int)evspin.open.angle) % 360) < 45) {
+        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+        evspin.base.synchro_active = false;
+        evspin.state = STATE_RUN;
+        return;
+      }
+    }
+    else {
+      evspin.base.synchro_active = false;
+      // TODO synchro failed
+      FOC_Stop();
+      return;
+    }
+  }
+  else {
+    evspin.base.clock = HAL_GetTick();
+    evspin.base.synchro_active = true;
+
+    evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
   }
 }
 
@@ -352,10 +393,20 @@ void FOC_MainControl(void) {
   int32_t localCurrV = evspin.adc.currents[1];
   int32_t localCurrW = evspin.adc.currents[2];
 
-  /* DRAFT */
   float sin, cos;
 
-//  float angle = 0;
+  switch(evspin.state) {
+  case STATE_STARTUP:
+  case STATE_SYNCHRO:
+    evspin.foc.angle = evspin.open.angle;
+    break;
+  case STATE_RUN:
+    evspin.foc.angle = evspin.enc.angle;
+    break;
+  default:
+    break;
+  }
+
   arm_sin_cos_f32(evspin.foc.angle, &sin, &cos);
 
   // Clarke transform

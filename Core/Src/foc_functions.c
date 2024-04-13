@@ -29,7 +29,7 @@ void FOC_Start(void) {
 
   // initialize PIDs and related variables
   FOC_PID_Init(&evspin.foc.speed_pid, PID_SPEED_KP, PID_SPEED_KI, PID_SPEED_KD, PID_SPEED_LIMIT);
-  evspin.foc.speed_pid.target = 500;
+  evspin.foc.speed_pid.target = STARTUP_SPEED;
   FOC_PID_Init(&evspin.foc.Id_pid, PID_CURRENT_KP, PID_CURRENT_KI, PID_CURRENT_KD, PID_CURRENT_LIMIT);
   FOC_PID_Init(&evspin.foc.Iq_pid, PID_CURRENT_KP, PID_CURRENT_KI, PID_CURRENT_KD, PID_CURRENT_LIMIT);
   evspin.foc.tim.maxCCR = LL_TIM_GetAutoReload(TIM1) - 20;

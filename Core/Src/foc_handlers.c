@@ -55,11 +55,11 @@ void ADC1_2_IRQHandler(void) {
       FOC_MainControl();
       break;
     case STATE_STARTUP:
-//      FOC_EncoderProcessing();
       FOC_OpenLoop_StartUp();
       FOC_MainControl();
       break;
     case STATE_SYNCHRO:
+      FOC_PositionSynchronization();
       FOC_EncoderProcessing();
       FOC_MainControl();
       break;

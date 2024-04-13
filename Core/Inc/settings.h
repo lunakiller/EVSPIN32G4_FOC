@@ -38,8 +38,8 @@
 
 #define STARTUP_CURRENT             ((uint16_t) 1000)               // d-axis current uapplied to start rotating in mA
 //#if OPENLOOP_START == 1
-#define STARTUP_TIME                ((uint16_t) 1000)               // startup phase length in ms
-#define STARTUP_SPEED               ((uint16_t) 500)
+#define STARTUP_TIME                ((uint16_t) 500)               // startup phase length in ms
+#define STARTUP_SPEED               ((uint16_t) 400)
 //#endif
 
 #define SYNCHRONIZATION_TIME        ((uint16_t) 1000)               // position synchronization phase length in ms

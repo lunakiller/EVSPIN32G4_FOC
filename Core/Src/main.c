@@ -138,7 +138,7 @@ int main(void)
   EVSPIN32G4_AssignOPAMPs(&hopamp1, &hopamp2, &hopamp3);
   EVSPIN32G4_AssignWWDG(&hwwdg);
   EVSPIN32G4_Init();
-  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+//  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 
 
   /* USER CODE END 2 */

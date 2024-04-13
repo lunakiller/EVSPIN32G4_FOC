@@ -75,7 +75,7 @@ typedef struct {
 } PID_t;
 
 typedef struct {
-  float el_position, mech_position, speed;
+  float el_position, mech_position, angle, speed;
   int32_t speed_filtered, direction;
   uint16_t zero_angle_cnt;
   int32_t mech_pos_diff;
@@ -125,6 +125,7 @@ typedef struct {
   float actual_speed;
   float angle_increment;
   float elapsed_time_ms;
+  float angle;
 } FOC_OpenLoop_t;
 
 typedef struct {
@@ -150,7 +151,7 @@ typedef struct {
 
 typedef struct {
 	uint32_t voltage_u, voltage_v, voltage_w;
-	float tmp;
+	float tmp[4];
 	bool open_loop_enable;
 	int open_loop_step;
 } Debug_t;
