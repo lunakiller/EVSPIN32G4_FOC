@@ -113,10 +113,10 @@ void FOC_SystickScheduler(void) {
     evspin.dbg.voltage_w = evspin.adc.buffers.ADC2_reg_raw[W_ADC2] * evspin.adc.vdda / 4096.0f * VMOT_COEFF;
 
     // TODO DEBUG - generate read events for trace
-    evspin.dbg.tmp[0] = evspin.foc.angle;
-    evspin.dbg.tmp[1] = evspin.enc.angle;
-    evspin.dbg.tmp[2] = evspin.foc.Iq;
-    evspin.dbg.tmp[3] = evspin.enc.speed_filtered;
+    evspin.dbg.tmp[0] = evspin.foc.Iq;
+    evspin.dbg.tmp[1] = evspin.mras.Iq_ada;
+    evspin.dbg.tmp[2] = evspin.foc.Valpha;
+    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
   }
 
 
@@ -357,6 +357,95 @@ void FOC_PositionSynchronization(void) {
 
     evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
   }
+}
+
+void FOC_MRAS(void) {
+  // TODO DEBUG
+  evspin.mras.angle = evspin.foc.angle;
+  evspin.mras.speed = evspin.run.speed;
+  /* ADAPTIVE SYSTEM */
+//  float tmpA, tmpB, tmpC;
+//  arm_inv_clarke_f32(evspin.foc.Valpha, evspin.foc.Vbeta, &tmpA, &tmpB);
+//
+//  // convert from mV to V
+//  tmpA /= 1000;
+//  tmpB /= 1000;
+//
+//  float Ualpha, Ubeta;
+//  // Clarke transform   TODO select phases
+//  arm_clarke_f32(tmpA, tmpB, &Ualpha, &Ubeta);
+
+  float sin, cos;
+  arm_sin_cos_f32(evspin.mras.angle, &sin, &cos);
+
+  // convert rpm to rad/s
+  int32_t speed_rad = evspin.mras.speed * 2 * PI / 60.0f;
+
+  float Ialpha_dot1, Ibeta_dot1;
+  #if SIMPLE_EULER == 1
+    // (Simple) Euler's method
+    Ialpha_dot1 = evspin.mras.Ialpha + ((-evspin.mras.Ialpha * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+               + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+  //             + (Ualpha / _MRAS_MOTOR_L);
+               + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L)) * (_SWITCHING_PERIOD_MS/1000);
+    Ibeta_dot1 = evspin.mras.Ibeta + ((-evspin.mras.Ibeta * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+              + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+  //            + (Ubeta / _MRAS_MOTOR_L);
+              + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L)) * (_SWITCHING_PERIOD_MS/1000);
+
+    evspin.mras.Ialpha = Ialpha_dot1;
+    evspin.mras.Ibeta = Ibeta_dot1;
+  #else
+    // Modified Euler's method
+    Ialpha_dot1 = ((-evspin.mras.Ialpha * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+                + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+                + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L));
+    Ibeta_dot1 = ((-evspin.mras.Ibeta * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+               + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+               + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L));
+
+    float Ialpha_dot2, Ibeta_dot2;
+    float Ialpha_pred = evspin.mras.Ialpha + (_SWITCHING_PERIOD_MS/1000) * Ialpha_dot1;
+    float Ibeta_pred = evspin.mras.Ibeta + (_SWITCHING_PERIOD_MS/1000) * Ibeta_dot1;
+
+    Ialpha_dot2 = ((-Ialpha_pred * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+                + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+                + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L));
+    Ibeta_dot2 = ((-Ibeta_pred * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+               + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
+               + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L));
+
+    evspin.mras.Ialpha += 0.5f * (_SWITCHING_PERIOD_MS/1000) * (Ialpha_dot1 + Ialpha_dot2);
+    evspin.mras.Ibeta += 0.5f * (_SWITCHING_PERIOD_MS/1000) * (Ibeta_dot1 + Ibeta_dot2);
+  #endif
+//  // prevent overflow and underflow
+//  if(Ialpha_dot1 > FLT_MAX)
+//    Ialpha_dot1 = FLT_MAX;
+//  else if(Ialpha_dot1 < FLT_MIN)
+//    Ialpha_dot1 = FLT_MIN;
+//  if(Ibeta_dot1 > FLT_MAX)
+//    Ibeta_dot1 = FLT_MAX;
+//  else if(Ibeta_dot1 < FLT_MIN)
+//    Ibeta_dot1 = FLT_MIN;
+
+  float Id_ada, Iq_ada;
+  // Park transform
+  arm_park_f32(evspin.mras.Ialpha, evspin.mras.Ibeta, &evspin.mras.Id_ada, &evspin.mras.Iq_ada, sin, cos);
+
+  // TODO DEBUG
+  evspin.mras.Iq_ada = FOC_LeakyIntegrator_f32(&evspin.dbg.mras_flt, evspin.mras.Iq_ada);
+
+  /* REFERENCE SYSTEM */
+  int32_t localCurrU = evspin.adc.currents[0];
+  int32_t localCurrV = evspin.adc.currents[1];
+  int32_t localCurrW = evspin.adc.currents[2];
+  float Ialpha, Ibeta;
+  // Clarke transform   TODO select phases
+  arm_clarke_f32(localCurrU, localCurrV, &Ialpha, &Ibeta);
+
+  // Park transform
+  arm_park_f32(Ialpha, Ibeta, &evspin.mras.Id, &evspin.mras.Iq, sin, cos);
+
 }
 
 void FOC_RunTask(void) {

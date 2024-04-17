@@ -9,9 +9,20 @@
 #ifndef __SETTINGS_H
 #define __SETTINGS_H
 
+/* Constant definitions */
+#ifndef PI
+  #define PI               3.14159265358979f
+#endif
 
+/* Helper macros */
+// convert Back-EMF constant from rpm/v to rad/v.s
+#define BEMF_KV_TO_KE(x)            (60.0f / (2 * PI * x))
+
+
+/* Library settings */
 #define SENSORLESS                  (0)                            // 1 - Sensroless, 0 - Encoder
-#define OPENLOOP_START              (1)                            // 1 - enable open-loop start-up, 0 - disable
+#define OPENLOOP_START              (0)                            // 1 - enable open-loop start-up, 0 - disable
+#define SIMPLE_EULER                (0)                            // solve ODE using simple Euler's method (faster, less accurate)
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
@@ -19,6 +30,11 @@
 
 // Motor parameters
 #define MOTOR_POLEPAIRS             ((uint8_t)  7)
+
+// Settings for the sensorless mode
+#define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms
+#define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH
+#define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in rad/V.s
 
 // Encoder parameters
 #define ENCODER_PULSES              ((uint16_t) 1024)
@@ -102,6 +118,8 @@
 #define _VBUS_COEFF                 ((float)(VBUS_R_VtoADC + VBUS_R_ADCtoGND) / (float)(VBUS_R_ADCtoGND))
 #define _VMOT_COEFF                 ((float)(VMOT_R_VtoADC + VMOT_R_ADCtoGND) / (float)(VMOT_R_ADCtoGND))
 #define _SWITCHING_PERIOD_MS        (1.0f / (float)SWITCHING_FREQUENCY)
+#define _MRAS_MOTOR_R               (MOTOR_TERMINAL_RESISTANCE / 2.0f)
+#define _MRAS_MOTOR_L               (MOTOR_TERMINAL_INDUCTANCE / 1000.0f / 2.0f)
 
 
 #endif  /* __SETTINGS_H */

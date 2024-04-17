@@ -129,6 +129,14 @@ typedef struct {
 } FOC_OpenLoop_t;
 
 typedef struct {
+  float angle;
+  int32_t speed;
+  float Ialpha, Ibeta;
+  float Id, Iq;
+  float Id_ada, Iq_ada;
+} FOC_Observer_t;
+
+typedef struct {
   int32_t speed_target;
   int32_t speed;
   int32_t ramp_final;
@@ -152,6 +160,7 @@ typedef struct {
 typedef struct {
 	uint32_t voltage_u, voltage_v, voltage_w;
 	float tmp[4];
+	LPF_f32_t mras_flt;
 	bool open_loop_enable;
 	int open_loop_step;
 } Debug_t;
@@ -162,6 +171,7 @@ typedef struct {
   FOC_Run_t run;
   FOC_t foc;
   FOC_OpenLoop_t open;
+  FOC_Observer_t mras;
   FOC_Encoder_t enc;
   ADC_Data_t adc;           // ADC data
   FOC_Periph_t periph;
