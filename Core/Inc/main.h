@@ -82,10 +82,6 @@ void Error_Handler(void);
 #define ADC1_VBUS_GPIO_Port GPIOA
 #define ADC1_CS_U_Pin GPIO_PIN_2
 #define ADC1_CS_U_GPIO_Port GPIOA
-#define DBG_DAC1_Pin GPIO_PIN_4
-#define DBG_DAC1_GPIO_Port GPIOA
-#define DBG_DAC2_Pin GPIO_PIN_5
-#define DBG_DAC2_GPIO_Port GPIOA
 #define ADC2_CS_V_Pin GPIO_PIN_6
 #define ADC2_CS_V_GPIO_Port GPIOA
 #define ADC2_NTC_Pin GPIO_PIN_4

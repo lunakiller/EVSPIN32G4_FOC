@@ -80,11 +80,11 @@ void ADC1_2_IRQHandler(void) {
     LL_TIM_DisableAllOutputs(TIM1);
   }
   else if(LL_ADC_IsActiveFlag_OVR(hadc1.Instance)) {
-    HAL_GPIO_TogglePin(DBG_DAC1_GPIO_Port, DBG_DAC1_Pin);
+//    HAL_GPIO_TogglePin(DBG_DAC1_GPIO_Port, DBG_DAC1_Pin);
     LL_ADC_ClearFlag_OVR(hadc1.Instance);
   }
   else if(LL_ADC_IsActiveFlag_OVR(hadc2.Instance)) {
-    HAL_GPIO_TogglePin(DBG_DAC2_GPIO_Port, DBG_DAC2_Pin);
+//    HAL_GPIO_TogglePin(DBG_DAC2_GPIO_Port, DBG_DAC2_Pin);
     LL_ADC_ClearFlag_OVR(hadc2.Instance);
   }
   else {
