@@ -86,6 +86,9 @@ typedef struct {
 typedef struct {
   int32_t phU, phV, phW;
   uint16_t maxCCR;
+  uint16_t compute_phase_threshold;
+  uint16_t phHighest;
+  uint8_t phHighest_id;
 } Timer_t;
 
 typedef struct {
@@ -96,7 +99,9 @@ typedef struct {
   float Id, Iq;
   float angle;
   float Vd, Vq;
+  float Vd_sat, Vq_sat;
   float Valpha, Vbeta;
+  float limit, limit_squared;
   Timer_t tim;
 } FOC_t;
 
@@ -116,6 +121,7 @@ typedef struct {
   bool startup_active;
   bool synchro_active;
   bool run_active;
+  bool dq_limiter_active;
   bool speed_ramp_active;
   uint32_t clock;
 } FOC_Base_t;

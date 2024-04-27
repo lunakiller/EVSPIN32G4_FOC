@@ -369,6 +369,26 @@ void FOC_PositionSynchronization(void) {
   }
 }
 
+static inline float _min_f32(float a, float b) {
+  return (a < b) ? a : b;
+}
+
+static inline int32_t _max_i32(int32_t a, int32_t b, uint8_t* id) {
+  if(a > b) {
+    *id += 0;
+    return a;
+  }
+  else {
+    *id += 1;
+    return b;
+  }
+}
+
+static inline int32_t _max3_i32(int32_t a, int32_t b, int32_t c, uint8_t* id) {
+  *id = 0;
+  return _max_i32(a, _max_i32(b, c, id), id);
+}
+
 void FOC_MRAS(void) {
   // TODO DEBUG
   evspin.mras.angle = evspin.foc.angle;
@@ -485,14 +505,87 @@ void FOC_RunTask(void) {
 }
 
 /**
+ * @brief DQ Limiter (also called Circle limitation) with priority on the D-axis.
+ */
+void FOC_DQ_Limiter(void) {
+  float d_squared, q_squared, sum_squared;
+
+  d_squared = evspin.foc.Vd * evspin.foc.Vd;
+  q_squared = evspin.foc.Vq * evspin.foc.Vq;
+  sum_squared = d_squared + q_squared;
+
+  if(sum_squared > evspin.foc.limit_squared) {
+    // d-axis voltage clamping
+    if(d_squared > evspin.foc.limit_squared) {
+      evspin.foc.Vd_sat = evspin.foc.limit;
+      d_squared = evspin.foc.limit_squared;
+
+      if(evspin.foc.Vd < 0) {
+        evspin.foc.Vd_sat = -evspin.foc.Vd_sat;
+      }
+    }
+    else {
+      evspin.foc.Vd_sat = evspin.foc.Vd;
+    }
+
+    evspin.foc.Vq_sat = _min_f32(q_squared, sqrtf(evspin.foc.limit_squared - d_squared));
+
+    if(evspin.foc.Vq < 0) {
+      evspin.foc.Vq_sat = -evspin.foc.Vq_sat;
+    }
+
+    evspin.base.dq_limiter_active = true;
+  }
+  else {
+    evspin.foc.Vd_sat = evspin.foc.Vd;
+    evspin.foc.Vq_sat = evspin.foc.Vq;
+
+    evspin.base.dq_limiter_active = false;
+  }
+}
+
+/**
  * @brief Main FOC task. Called after every current measurement conversion.
  */
 void FOC_MainControl(void) {
-  int32_t localCurrU = evspin.adc.currents[0];
-  int32_t localCurrV = evspin.adc.currents[1];
-  int32_t localCurrW = evspin.adc.currents[2];
+  int32_t localCurrV;
+  int32_t localCurrW;
+  int32_t localCurrU;
 
-  float sin, cos;
+  // more than 75% duty cycle?
+  if(evspin.foc.tim.phHighest > evspin.foc.tim.compute_phase_threshold) {
+    // compute phase current with the highest duty-cycle
+    switch(evspin.foc.tim.phHighest_id) {
+      case 0:
+        localCurrV = evspin.adc.currents[1];
+        localCurrW = evspin.adc.currents[2];
+        localCurrU = -(localCurrV + localCurrW);
+        break;
+      case 1:
+        localCurrU = evspin.adc.currents[0];
+        localCurrW = evspin.adc.currents[2];
+        localCurrV = -(localCurrU + localCurrW);
+        break;
+      case 2:
+        localCurrU = evspin.adc.currents[0];
+        localCurrV = evspin.adc.currents[1];
+        localCurrW = -(localCurrU + localCurrV);
+        break;
+      default:
+        localCurrU = 0;
+        localCurrV = 0;
+        localCurrW = 0;
+        // should not happen
+        FOC_Stop();
+        break;
+    }
+  }
+  else {
+    // take raw current measurements
+    localCurrU = evspin.adc.currents[0];
+    localCurrV = evspin.adc.currents[1];
+    localCurrW = evspin.adc.currents[2];
+  }
 
   switch(evspin.state) {
   case STATE_STARTUP:
@@ -506,6 +599,7 @@ void FOC_MainControl(void) {
     break;
   }
 
+  float sin, cos;
   arm_sin_cos_f32(evspin.foc.angle, &sin, &cos);
 
   // Clarke transform
@@ -518,10 +612,10 @@ void FOC_MainControl(void) {
   evspin.foc.Vd = FOC_PID(&evspin.foc.Id_pid, evspin.foc.Id_pid.target - evspin.foc.Id);
   evspin.foc.Vq = FOC_PID(&evspin.foc.Iq_pid, evspin.foc.Iq_pid.target - evspin.foc.Iq);
 
-  // TODO circle limitation
+  FOC_DQ_Limiter();
 
   // inverse Park transform
-  arm_inv_park_f32(evspin.foc.Vd, evspin.foc.Vq, &evspin.foc.Valpha, &evspin.foc.Vbeta, sin, cos);
+  arm_inv_park_f32(evspin.foc.Vd_sat, evspin.foc.Vq_sat, &evspin.foc.Valpha, &evspin.foc.Vbeta, sin, cos);
 
   FOC_Modulator(evspin.foc.Valpha, evspin.foc.Vbeta, &evspin.foc.tim.phU, &evspin.foc.tim.phV, &evspin.foc.tim.phW);
 
@@ -529,6 +623,14 @@ void FOC_MainControl(void) {
   LL_TIM_OC_SetCompareCH2(TIM1, evspin.foc.tim.phV);
   LL_TIM_OC_SetCompareCH3(TIM1, evspin.foc.tim.phW);
   LL_TIM_GenerateEvent_UPDATE(TIM1);
+
+  evspin.foc.tim.phHighest = _max3_i32(evspin.foc.tim.phU, evspin.foc.tim.phV, evspin.foc.tim.phW, &evspin.foc.tim.phHighest_id);
+
+  // TODO DEBUG
+  evspin.dbg.tmp1 = localCurrU;
+  evspin.dbg.tmp2 = localCurrV;
+//  evspin.dbg.tmp1 = evspin.foc.Vq / 4;
+//  evspin.dbg.tmp2 = evspin.foc.Vq_sat / 4;
 }
 
 /**

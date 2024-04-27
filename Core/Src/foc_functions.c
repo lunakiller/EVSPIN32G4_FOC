@@ -33,9 +33,12 @@ void FOC_Start(void) {
   FOC_PID_Init(&evspin.foc.Id_pid, PID_CURRENT_KP, PID_CURRENT_KI, PID_CURRENT_KD, PID_CURRENT_LIMIT);
   FOC_PID_Init(&evspin.foc.Iq_pid, PID_CURRENT_KP, PID_CURRENT_KI, PID_CURRENT_KD, PID_CURRENT_LIMIT);
   evspin.foc.tim.maxCCR = LL_TIM_GetAutoReload(TIM1) - 20;
+  evspin.foc.tim.compute_phase_threshold = LL_TIM_GetAutoReload(TIM1) - (LL_TIM_GetAutoReload(TIM1) / 4);
   evspin.foc.tim.phU = (LL_TIM_GetAutoReload(TIM1) / 2);
   evspin.foc.tim.phV = (LL_TIM_GetAutoReload(TIM1) / 2);
   evspin.foc.tim.phW = (LL_TIM_GetAutoReload(TIM1) / 2);
+  evspin.foc.limit = ((float)DQLIM_MAX_VOLTAGE / 100.0f) * evspin.adc.vbus;
+  evspin.foc.limit_squared = evspin.foc.limit * evspin.foc.limit;
 
   evspin.base.bootstrap_active = false;
   evspin.base.alignment_active = false;

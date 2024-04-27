@@ -64,6 +64,9 @@
 // moving average filter
 #define FILTER_LENGTH               ((uint8_t)  32)                 // length of the moving average filter
 
+// DQ limiter settings
+#define DQLIM_MAX_VOLTAGE           ((uint8_t)  85)                 // maximal DQ voltage in % of Vbus
+
 // speed PID
 #define PID_SPEED_KP                ((float)    1)
 #define PID_SPEED_KI                ((float)    0.02)
