@@ -535,7 +535,7 @@ void TIM1_Setup(void) {
   TIM_BDTRInitStruct.OSSRState = LL_TIM_OSSR_DISABLE;
   TIM_BDTRInitStruct.OSSIState = LL_TIM_OSSI_DISABLE;
   TIM_BDTRInitStruct.LockLevel = LL_TIM_LOCKLEVEL_OFF;
-  TIM_BDTRInitStruct.DeadTime = __LL_TIM_CALC_DEADTIME(170000000, LL_TIM_GetClockDivision(TIM4), DEAD_TIME);
+  TIM_BDTRInitStruct.DeadTime = __LL_TIM_CALC_DEADTIME(170000000, LL_TIM_GetClockDivision(TIM1), DEAD_TIME);
   TIM_BDTRInitStruct.BreakState = LL_TIM_BREAK_ENABLE;
   TIM_BDTRInitStruct.BreakPolarity = LL_TIM_BREAK_POLARITY_LOW;
   TIM_BDTRInitStruct.BreakFilter = LL_TIM_BREAK_FILTER_FDIV1_N4;

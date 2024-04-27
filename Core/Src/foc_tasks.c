@@ -209,8 +209,8 @@ void FOC_AlignRotor(void) {
 }
 
 void FOC_EncoderProcessing(void) {
-  volatile uint32_t tim_cnt;
-  int32_t act_mech_pos, act_el_pos;
+  uint32_t tim_cnt;
+  int32_t act_mech_pos;
   int32_t mech_pos_diff = 0;
 
   evspin.enc.direction = LL_TIM_GetDirection(TIM4);
@@ -329,7 +329,7 @@ void FOC_OpenLoop_StartUp(void) {
 
 void FOC_PositionSynchronization(void) {
   if(evspin.base.synchro_active == true) {
-    if(HAL_GetTick() - evspin.base.clock < STARTUP_TIME) {
+    if(HAL_GetTick() - evspin.base.clock < SYNCHRONIZATION_TIME) {
       evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
 
       // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]

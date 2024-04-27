@@ -162,7 +162,7 @@ typedef struct {
 	float tmp[4];
 	LPF_f32_t mras_flt;
 	bool open_loop_enable;
-	int open_loop_step;
+	int32_t open_loop_step;
 } Debug_t;
 
 typedef struct {

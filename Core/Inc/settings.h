@@ -15,7 +15,7 @@
 #endif
 
 /* Helper macros */
-// convert Back-EMF constant from rpm/v to rad/v.s
+// convert Back-EMF constant from rpm/V to V.s/rad
 #define BEMF_KV_TO_KE(x)            (60.0f / (2 * PI * x))
 
 
@@ -34,7 +34,7 @@
 // Settings for the sensorless mode
 #define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms
 #define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH
-#define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in rad/V.s
+#define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in V.s/rad (k_e)
 
 // Encoder parameters
 #define ENCODER_PULSES              ((uint16_t) 1024)
