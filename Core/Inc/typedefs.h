@@ -160,6 +160,7 @@ typedef struct {
 typedef struct {
 	uint32_t voltage_u, voltage_v, voltage_w;
 	float tmp[4];
+	int32_t tmp1, tmp2, int_angle;
 	LPF_f32_t mras_flt;
 	bool open_loop_enable;
 	int32_t open_loop_step;

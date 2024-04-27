@@ -113,10 +113,16 @@ void FOC_SystickScheduler(void) {
     evspin.dbg.voltage_w = evspin.adc.buffers.ADC2_reg_raw[W_ADC2] * evspin.adc.vdda / 4096.0f * VMOT_COEFF;
 
     // TODO DEBUG - generate read events for trace
-    evspin.dbg.tmp[0] = evspin.foc.Iq;
-    evspin.dbg.tmp[1] = evspin.mras.Iq_ada;
-    evspin.dbg.tmp[2] = evspin.foc.Valpha;
-    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
+//    evspin.dbg.tmp[0] = evspin.foc.angle;
+//    evspin.dbg.tmp[1] = evspin.enc.angle;
+//    evspin.dbg.tmp[2] = evspin.foc.Iq;
+//    evspin.dbg.tmp[3] = evspin.enc.speed_filtered;
+//    evspin.dbg.tmp[0] = evspin.foc.Iq;
+//    evspin.dbg.tmp[1] = evspin.mras.Iq_ada;
+//    evspin.dbg.tmp[2] = evspin.foc.Valpha;
+//    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
+    evspin.dbg.tmp[0] = evspin.foc.Vq;
+    evspin.dbg.tmp[1] = evspin.foc.Vd;
   }
 
 
@@ -239,8 +245,8 @@ void FOC_EncoderProcessing(void) {
     mech_pos_diff = 0;
   }
 
-  evspin.enc.speed = (float)mech_pos_diff * (SWITCHING_FREQUENCY * 1000) * 60.0f / (ENCODER_PULSES * 2);
-  evspin.enc.speed_filtered = FOC_LeakyIntegrator_int(&evspin.enc.speed_lpf, evspin.enc.speed);
+	evspin.enc.speed = (float)mech_pos_diff * (SWITCHING_FREQUENCY * 1000) * 60.0f / (ENCODER_PULSES * 2);
+	evspin.enc.speed_filtered = FOC_LeakyIntegrator_int(&evspin.enc.speed_lpf, evspin.enc.speed);
 //  evspin.enc.speed_filtered = FOC_MovingAverage(evspin.enc.speed);
   evspin.run.speed = evspin.enc.speed_filtered;
 
@@ -254,6 +260,10 @@ void FOC_EncoderProcessing(void) {
   if(evspin.enc.angle >= 180.0f * MOTOR_POLEPAIRS) {
     evspin.enc.angle -= 360.0f * MOTOR_POLEPAIRS;
   }
+
+  // TODO DEBUG
+//  evspin.dbg.tmp1 = evspin.enc.mech_pos_diff * 256;
+//	evspin.dbg.tmp2 = evspin.enc.speed_filtered;
 
   if(evspin.dbg.open_loop_enable == false) {
 //    evspin.foc.angle = evspin.enc.angle;
@@ -552,6 +562,10 @@ void FOC_Modulator(float Valpha, float Vbeta, int32_t* Va, int32_t* Vb, int32_t*
     *Vc = evspin.foc.tim.maxCCR;
   else if(*Vc < 0)
     *Vc = 0;
+
+  // TODO DEBUG
+//  evspin.dbg.tmp1 = tmpA / 8;
+//  evspin.dbg.tmp2 = *Va / 4;
 
   return;
 }

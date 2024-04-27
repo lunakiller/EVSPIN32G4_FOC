@@ -90,8 +90,9 @@ void ADC1_2_IRQHandler(void) {
   else {
     volatile uint32_t reg_adc1 = hadc1.Instance->ISR;
     volatile uint32_t reg_adc2 = hadc2.Instance->ISR;
-    DEBUG_print("Unknown ADC interrupt: ");
-    DEBUG_printf("ADC1 0x%02x, ADC2 0x%02x\r\n", (unsigned int)reg_adc1, (unsigned int)reg_adc2);
+    DEBUG_print("ADC\r\n");
+//    DEBUG_print("Unknown ADC interrupt: ");
+//    DEBUG_printf("ADC1 0x%02x, ADC2 0x%02x\r\n", (unsigned int)reg_adc1, (unsigned int)reg_adc2);
 
 //    LL_TIM_DisableAllOutputs(TIM1);
 //    __NOP();       // TODO DEBUG
@@ -104,8 +105,8 @@ void EXTI9_5_IRQHandler(void) {
 	  evspin.enc.zero_angle_cnt = LL_TIM_GetCounter(TIM4);
 //	  LL_TIM_SetCounter(TIM4, evspin.enc.mech_position * (ENCODER_PULSES * 2) / 360.0);
 		LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_8);
-		DEBUG_print("ENC ZERO\r\n");
-		__NOP();
+//		DEBUG_print("ZERO\r\n");
+//		__NOP();
 	}
 }
 

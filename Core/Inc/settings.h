@@ -26,7 +26,7 @@
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
-#define DEAD_TIME                   ((uint16_t) 300)               // deadtime in ns
+#define DEAD_TIME                   ((uint16_t) 500)               // deadtime in ns
 
 // Motor parameters
 #define MOTOR_POLEPAIRS             ((uint8_t)  7)
@@ -35,13 +35,14 @@
 #define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms
 #define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH
 #define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in V.s/rad (k_e)
+#define MOTOR_ROTOR_INERTIA         ()
 
 // Encoder parameters
 #define ENCODER_PULSES              ((uint16_t) 1024)
 
 // Protections
 #define UNDERVOLTAGE_THRESHOLD      ((uint8_t)  10)                 // undervoltage protection threshold in V
-#define OVERVOLTAGE_THRESHOLD       ((uint8_t)  15)                 // overvoltage protection threshold in V
+#define OVERVOLTAGE_THRESHOLD       ((uint8_t)  35)                 // overvoltage protection threshold in V
 #define SW_OVERCURRENT_THRESHOLD    ((uint16_t) 2000)               // overcurrent protection threshold in mA
 
 // Bootstrap charging phase settings
@@ -49,13 +50,13 @@
 
 // Alignment phase settings
 #define ALIGNMENT_TIME              ((uint16_t) 1000)               // alignment phase length in ms
-#define ALIGNMENT_CURRENT           ((uint16_t) 1000)               // d-axis current used to align the rotor in mA
-#define ALIGNMENT_ANGLE             ((int16_t)  90)                 // alignment electrical angle [-180  179]
+#define ALIGNMENT_CURRENT           ((int16_t)  1000)               // d-axis current used to align the rotor in mA
+#define ALIGNMENT_ANGLE             ((int16_t)  110)                 // alignment electrical angle [-180  179]
 
-#define STARTUP_CURRENT             ((uint16_t) 1000)               // d-axis current uapplied to start rotating in mA
+#define STARTUP_CURRENT             ((int16_t)  500)               // d-axis current applied to start rotating in mA
 //#if OPENLOOP_START == 1
-#define STARTUP_TIME                ((uint16_t) 500)               // startup phase length in ms
-#define STARTUP_SPEED               ((uint16_t) 400)
+#define STARTUP_TIME                ((uint16_t) 500)                // startup phase length in ms
+#define STARTUP_SPEED               ((int16_t)  400)
 //#endif
 
 #define SYNCHRONIZATION_TIME        ((uint16_t) 1000)               // position synchronization phase length in ms
@@ -67,13 +68,13 @@
 #define PID_SPEED_KP                ((float)    1)
 #define PID_SPEED_KI                ((float)    0.02)
 #define PID_SPEED_KD                ((float)    0)
-#define PID_SPEED_LIMIT             ((float)    1000)        // TODO
+#define PID_SPEED_LIMIT             ((float)    SW_OVERCURRENT_THRESHOLD)        // TODO
 
 // D-Q current PIDs
-#define PID_CURRENT_KP							((float)    1)
-#define PID_CURRENT_KI							((float)    0.1)
+#define PID_CURRENT_KP							((float)    16)						// 1
+#define PID_CURRENT_KI							((float)    1)						// 0.1
 #define PID_CURRENT_KD							((float)    0)
-#define PID_CURRENT_LIMIT						((float)    10000)				// TODO
+#define PID_CURRENT_LIMIT						((float)    35000)				// TODO
 
 // VBUS divider
 #define VBUS_R_VtoADC               ((uint32_t) 72300)              // resistor between VM and ADC input in Ohms
@@ -86,7 +87,7 @@
 #define VMOT_COEFF                  ((float)    _VMOT_COEFF)        // coefficient to compute applied voltages from ADC
 
 // Current sensing
-#define CS_SHUNT_VALUE              ((float)    0.005)              // shunt in Ohms
+#define CS_SHUNT_VALUE              ((float)    0.02)              // shunt in Ohms
 #define CS_R_SHUNTNtoOPN            ((uint32_t) 1500)               // resistor between negative shunt output and negative OPAMP input in Ohms
 #define CS_R_OPNtoOPO               ((uint32_t) 11000)              // resistor between negative OPAMP input and OPAMP output in Ohms
 #define CS_GAIN                     ((float)    _CS_GAIN)           // current sensing amplifier gain
