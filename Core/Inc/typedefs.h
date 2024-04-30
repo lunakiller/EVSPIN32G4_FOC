@@ -95,6 +95,7 @@ typedef struct {
   PID_t Id_pid;
   PID_t Iq_pid;
   PID_t speed_pid;
+  int32_t currents_comp[3];      // duty-cycle compensated current in mA
   float Ialpha, Ibeta;
   float Id, Iq;
   float angle;
@@ -132,6 +133,7 @@ typedef struct {
   float angle_increment;
   float elapsed_time_ms;
   float angle;
+  uint8_t sync_cnt;
 } FOC_OpenLoop_t;
 
 typedef struct {
@@ -140,6 +142,10 @@ typedef struct {
   float Ialpha, Ibeta;
   float Id, Iq;
   float Id_ada, Iq_ada;
+  float speed_error;
+  float speed_mech_ada, speed_el_ada;
+  float angle_ada, angle_ada_deg;
+  PID_t omega_pid;
 } FOC_Observer_t;
 
 typedef struct {
@@ -168,6 +174,7 @@ typedef struct {
 	float tmp[4];
 	int32_t tmp1, tmp2, int_angle;
 	LPF_f32_t mras_flt;
+	bool force_sensorless;
 	bool open_loop_enable;
 	int32_t open_loop_step;
 } Debug_t;

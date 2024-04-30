@@ -42,6 +42,10 @@ void ADC1_2_IRQHandler(void) {
       evspin.state = STATE_ERROR;
     }
 
+    // DQ limits
+    evspin.foc.limit = ((float)DQLIM_MAX_VOLTAGE / 100.0f) * evspin.adc.vbus;
+    evspin.foc.limit_squared = evspin.foc.limit * evspin.foc.limit;
+
     // TODO state machine
     switch(evspin.state) {
     case STATE_IDLE:
@@ -49,23 +53,29 @@ void ADC1_2_IRQHandler(void) {
     case STATE_BOOTSTRAP:
       break;
     case STATE_READY:
+      FOC_CurrentCompensation();
       FOC_MainControl();
       break;
     case STATE_ALIGNMENT:
+      FOC_CurrentCompensation();
       FOC_MainControl();
       break;
     case STATE_STARTUP:
       FOC_OpenLoop_StartUp();
+      FOC_CurrentCompensation();
+      FOC_MRAS();
       FOC_MainControl();
       break;
     case STATE_SYNCHRO:
       FOC_PositionSynchronization();
       FOC_EncoderProcessing();
+      FOC_CurrentCompensation();
       FOC_MRAS();
       FOC_MainControl();
       break;
     case STATE_RUN:
       FOC_EncoderProcessing();
+      FOC_CurrentCompensation();
       FOC_MRAS();
       FOC_MainControl();
       break;

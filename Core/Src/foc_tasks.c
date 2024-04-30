@@ -123,8 +123,10 @@ void FOC_SystickScheduler(void) {
 //    evspin.dbg.tmp[3] = evspin.mras.Id_ada;
 //    evspin.dbg.tmp[2] = evspin.foc.Valpha;
 //    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
-    evspin.dbg.tmp[0] = evspin.foc.Vq;
-    evspin.dbg.tmp[1] = evspin.foc.Vd;
+//    evspin.dbg.tmp[0] = evspin.foc.Vq;
+//    evspin.dbg.tmp[1] = evspin.foc.Vd;
+    evspin.dbg.tmp[0] = evspin.mras.speed_mech_ada - evspin.enc.speed_filtered;
+    evspin.dbg.tmp[1] = evspin.mras.angle_ada - evspin.foc.angle;
   }
 
 
@@ -197,11 +199,19 @@ void FOC_AlignRotor(void) {
       evspin.foc.Iq_pid.target = STARTUP_CURRENT;
 
       evspin.base.alignment_active = false;
-      #if SENSORLESS == 1 || OPENLOOP_START == 1
-        evspin.state = STATE_STARTUP;
-      #else
-        evspin.state = STATE_RUN;
-      #endif
+
+#if SENSORLESS == 1 || OPENLOOP_START == 1
+      // TODO DEBUG init cond
+      evspin.mras.Id_ada = 0;
+      evspin.mras.Iq_ada = STARTUP_CURRENT;
+      evspin.mras.speed_mech_ada = 0;
+      evspin.mras.angle_ada_deg = ALIGNMENT_ANGLE;
+      evspin.mras.angle_ada = ALIGNMENT_ANGLE * 2 * PI / 360.0f;
+
+      evspin.state = STATE_STARTUP;
+#else
+      evspin.state = STATE_RUN;
+#endif
     }
     else if(elapsed < (ALIGNMENT_TIME / 2)) {
       evspin.foc.Id_pid.target = ALIGNMENT_CURRENT;
@@ -213,6 +223,43 @@ void FOC_AlignRotor(void) {
     evspin.base.alignment_active = true;
 
     evspin.foc.angle = ALIGNMENT_ANGLE;
+  }
+}
+
+void FOC_CurrentCompensation(void) {
+  // more than 75% duty cycle?
+  if(evspin.foc.tim.phHighest > evspin.foc.tim.compute_phase_threshold) {
+    // compute phase current with the highest duty-cycle
+    switch(evspin.foc.tim.phHighest_id) {
+      case 0:
+        evspin.foc.currents_comp[0] = -(evspin.adc.currents[1] + evspin.adc.currents[2]);
+        evspin.foc.currents_comp[1] = evspin.adc.currents[1];
+        evspin.foc.currents_comp[2] = evspin.adc.currents[2];
+        break;
+      case 1:
+        evspin.foc.currents_comp[0] = evspin.adc.currents[0];
+        evspin.foc.currents_comp[1] = -(evspin.adc.currents[0] + evspin.adc.currents[2]);
+        evspin.foc.currents_comp[2] = evspin.adc.currents[2];
+        break;
+      case 2:
+        evspin.foc.currents_comp[0] = evspin.adc.currents[0];
+        evspin.foc.currents_comp[1] = evspin.adc.currents[1];
+        evspin.foc.currents_comp[2] = -(evspin.adc.currents[0] + evspin.adc.currents[1]);
+        break;
+      default:
+        evspin.foc.currents_comp[0] = 0;
+        evspin.foc.currents_comp[1] = 0;
+        evspin.foc.currents_comp[2] = 0;
+        // should not happen
+        FOC_Stop();
+        break;
+    }
+  }
+  else {
+    // take raw current measurements
+    evspin.foc.currents_comp[0] = evspin.adc.currents[0];
+    evspin.foc.currents_comp[1] = evspin.adc.currents[1];
+    evspin.foc.currents_comp[2] = evspin.adc.currents[2];
   }
 }
 
@@ -306,8 +353,16 @@ void FOC_EncoderProcessing(void) {
 
 void FOC_SpeedControl(void) {
   // PID regulator
-  evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.enc.speed_filtered);
-
+#if SENSORLESS == 1
+  evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.mras.speed_mech_ada);
+#else
+	if(!evspin.dbg.force_sensorless) {
+		evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.enc.speed_filtered);
+	}
+	else {
+		evspin.foc.Iq_pid.target = FOC_PID(&evspin.foc.speed_pid, evspin.foc.speed_pid.target - evspin.mras.speed_mech_ada);
+	}
+#endif
   evspin.run.speed_target = evspin.foc.speed_pid.target;
 }
 
@@ -343,7 +398,8 @@ void FOC_OpenLoop_StartUp(void) {
 
 void FOC_PositionSynchronization(void) {
   if(evspin.base.synchro_active == true) {
-    if(HAL_GetTick() - evspin.base.clock < SYNCHRONIZATION_TIME) {
+    uint32_t elapsed = HAL_GetTick() - evspin.base.clock;
+    if(elapsed < SYNCHRONIZATION_TIME) {
       evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
 
       // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
@@ -351,11 +407,28 @@ void FOC_PositionSynchronization(void) {
         evspin.open.angle -= 360.0f * MOTOR_POLEPAIRS;
       }
 
+      // gradually lower q-axis current
+      evspin.foc.Iq_pid.target = FOC_LinearRamp(STARTUP_CURRENT, (2 * STARTUP_CURRENT / 3), SYNCHRONIZATION_TIME, elapsed);
+#if SENSORLESS == 1
+      if((abs((int)evspin.mras.angle_ada_deg - (int)evspin.open.angle) % 360) < 45) {
+        if(evspin.open.sync_cnt >= 5 && (abs((int)evspin.mras.speed_mech_ada - STARTUP_SPEED)) < 100) {
+#else
       if((abs((int)evspin.enc.angle - (int)evspin.open.angle) % 360) < 45) {
-        HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
-        evspin.base.synchro_active = false;
-        evspin.state = STATE_RUN;
-        return;
+        if(evspin.open.sync_cnt >= 5 && (abs((int)evspin.enc.speed_filtered - STARTUP_SPEED)) < 100) {
+#endif
+          DEBUG_print("SYNC\r\n");
+          HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+          evspin.base.synchro_active = false;
+          evspin.state = STATE_RUN;
+
+          // TODO DEBUG
+          HAL_GPIO_WritePin(DBG_TRG_GPIO_Port, DBG_TRG_Pin, GPIO_PIN_RESET);
+          return;
+        }
+        evspin.open.sync_cnt++;
+      }
+      else {
+        evspin.open.sync_cnt = 0;
       }
     }
     else {
@@ -369,8 +442,42 @@ void FOC_PositionSynchronization(void) {
     evspin.base.clock = HAL_GetTick();
     evspin.base.synchro_active = true;
 
+    // TODO DEBUG
+    HAL_GPIO_WritePin(DBG_TRG_GPIO_Port, DBG_TRG_Pin, GPIO_PIN_SET);
+
     evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
   }
+}
+
+void FOC_RunTask(void) {
+  if(evspin.run.activate_ramp == true) {
+    if(evspin.base.speed_ramp_active == false) {
+      evspin.run._ramp_initial = evspin.run.speed_target;
+      evspin.run._ramp_elapsed = 0;
+
+      evspin.base.speed_ramp_active = true;
+    }
+    else {
+      evspin.run._ramp_elapsed += 1;
+
+      if(evspin.run._ramp_elapsed >= evspin.run.ramp_duration) {
+        evspin.foc.speed_pid.target = evspin.run.ramp_final;
+
+        evspin.base.speed_ramp_active = false;
+        evspin.run.activate_ramp = false;
+      }
+      else {
+        evspin.foc.speed_pid.target = FOC_LinearRamp(evspin.run._ramp_initial, evspin.run.ramp_final, evspin.run.ramp_duration, evspin.run._ramp_elapsed);
+      }
+    }
+  }
+
+  evspin.base.run_active = true;      // TODO ne tak casto
+}
+
+static inline float _clamp_f32(float f, float min, float max) {
+  const float t = f < min ? min : f;
+  return t > max ? max : t;
 }
 
 static inline float _min_f32(float a, float b) {
@@ -396,116 +503,146 @@ static inline int32_t _max3_i32(int32_t a, int32_t b, int32_t c, uint8_t* id) {
 void FOC_MRAS(void) {
   // TODO DEBUG
   evspin.mras.angle = evspin.foc.angle;
-  evspin.mras.speed = evspin.run.speed;
+  if(evspin.state == STATE_RUN) {
+    evspin.mras.speed = evspin.run.speed;   // TODO only to compare
+//    evspin.mras.speed = evspin.mras.speed_ada;
+  }
   /* ADAPTIVE SYSTEM */
-//  float tmpA, tmpB, tmpC;
-//  arm_inv_clarke_f32(evspin.foc.Valpha, evspin.foc.Vbeta, &tmpA, &tmpB);
-//
-//  // convert from mV to V
-//  tmpA /= 1000;
-//  tmpB /= 1000;
-//
-//  float Ualpha, Ubeta;
-//  // Clarke transform   TODO select phases
-//  arm_clarke_f32(tmpA, tmpB, &Ualpha, &Ubeta);
-
   float sin, cos;
-  arm_sin_cos_f32(evspin.mras.angle, &sin, &cos);
+  arm_sin_cos_f32(evspin.mras.angle_ada_deg, &sin, &cos);
+//  arm_sin_cos_f32(evspin.mras.angle, &sin, &cos);
 
   // convert rpm to rad/s
-  int32_t speed_rad = evspin.mras.speed * 2 * PI / 60.0f;
+  int32_t speed_mech_rad = evspin.mras.speed_mech_ada * 2 * PI / 60.0f;
 
-  float Ialpha_dot1, Ibeta_dot1;
-  #if SIMPLE_EULER == 1
-    // (Simple) Euler's method
-    Ialpha_dot1 = evspin.mras.Ialpha + ((-evspin.mras.Ialpha * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-               + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-  //             + (Ualpha / _MRAS_MOTOR_L);
-               + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L)) * (_SWITCHING_PERIOD_MS/1000);
-    Ibeta_dot1 = evspin.mras.Ibeta + ((-evspin.mras.Ibeta * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-              + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-  //            + (Ubeta / _MRAS_MOTOR_L);
-              + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L)) * (_SWITCHING_PERIOD_MS/1000);
+  float Id_dot1, Iq_dot1;
+#if SIMPLE_EULER == 1
+  // (Simple) Euler's method
+  Id_dot1 = evspin.mras.Id_ada + ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+             + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
+             + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+  Iq_dot1 = evspin.mras.Iq_ada + ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+            - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
+            - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+            + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
 
-    evspin.mras.Ialpha = Ialpha_dot1;
-    evspin.mras.Ibeta = Ibeta_dot1;
-  #else
-    // Modified Euler's method
-    Ialpha_dot1 = ((-evspin.mras.Ialpha * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-                + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-                + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L));
-    Ibeta_dot1 = ((-evspin.mras.Ibeta * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-               + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-               + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L));
+  evspin.mras.Id_ada = Id_dot1;
+  evspin.mras.Iq_ada = Iq_dot1;
+#else
+  // Modified Euler's method
+  Id_dot1 = ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+          + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
+          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+  Iq_dot1 = ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+          - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
+          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
 
-    float Ialpha_dot2, Ibeta_dot2;
-    float Ialpha_pred = evspin.mras.Ialpha + (_SWITCHING_PERIOD_MS/1000) * Ialpha_dot1;
-    float Ibeta_pred = evspin.mras.Ibeta + (_SWITCHING_PERIOD_MS/1000) * Ibeta_dot1;
+  float Id_dot2, Iq_dot2;
+  float Id_pred = evspin.mras.Id_ada + (_SWITCHING_PERIOD_MS/1000) * Id_dot1;
+  float Iq_pred = evspin.mras.Iq_ada + (_SWITCHING_PERIOD_MS/1000) * Iq_dot1;
 
-    Ialpha_dot2 = ((-Ialpha_pred * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-                + (speed_rad * sin * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-                + ((evspin.foc.Valpha / 1000) / _MRAS_MOTOR_L));
-    Ibeta_dot2 = ((-Ibeta_pred * (_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-               + (speed_rad * cos * (MOTOR_BEMF_CONSTANT / _MRAS_MOTOR_L))
-               + ((evspin.foc.Vbeta / 1000) / _MRAS_MOTOR_L));
+  Id_dot2 = ((Id_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+          + (speed_mech_rad * MOTOR_POLEPAIRS * Iq_pred)
+          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+  Iq_dot2 = ((Iq_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+          - (speed_mech_rad * MOTOR_POLEPAIRS * Id_pred)
+          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
 
-    evspin.mras.Ialpha += 0.5f * (_SWITCHING_PERIOD_MS/1000) * (Ialpha_dot1 + Ialpha_dot2);
-    evspin.mras.Ibeta += 0.5f * (_SWITCHING_PERIOD_MS/1000) * (Ibeta_dot1 + Ibeta_dot2);
-  #endif
-//  // prevent overflow and underflow
-//  if(Ialpha_dot1 > FLT_MAX)
-//    Ialpha_dot1 = FLT_MAX;
-//  else if(Ialpha_dot1 < FLT_MIN)
-//    Ialpha_dot1 = FLT_MIN;
-//  if(Ibeta_dot1 > FLT_MAX)
-//    Ibeta_dot1 = FLT_MAX;
-//  else if(Ibeta_dot1 < FLT_MIN)
-//    Ibeta_dot1 = FLT_MIN;
+  evspin.mras.Id_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Id_dot1 + Id_dot2);
+  evspin.mras.Iq_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Iq_dot1 + Iq_dot2);
+#endif
 
-  float Id_ada, Iq_ada;
-  // Park transform
-  arm_park_f32(evspin.mras.Ialpha, evspin.mras.Ibeta, &evspin.mras.Id_ada, &evspin.mras.Iq_ada, sin, cos);
+//  float Ialpha_dot1, Ibeta_dot1;
+//#if SIMPLE_EULER == 1
+//  // (Simple) Euler's method
+//  Ialpha_dot1 = evspin.mras.Ialpha + ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//             + (speed_mech_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//             + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+//  Ibeta_dot1 = evspin.mras.Ibeta + ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//            - (speed_mech_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//            + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+//
+//  evspin.mras.Ialpha = Ialpha_dot1;
+//  evspin.mras.Ibeta = Ibeta_dot1;
+//#else
+//  // Modified Euler's method
+//  Ialpha_dot1 = ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//              + (speed_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Ibeta_dot1 = ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//             - (speed_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//
+//  float Ialpha_dot2, Ibeta_dot2;
+//  float Ialpha_pred = evspin.mras.Ialpha + (_SWITCHING_PERIOD_MS/1000) * Ialpha_dot1;
+//  float Ibeta_pred = evspin.mras.Ibeta + (_SWITCHING_PERIOD_MS/1000) * Ibeta_dot1;
+//
+//  Ialpha_dot2 = ((Ialpha_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//              + (speed_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Ibeta_dot2 = ((Ibeta_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//             - (speed_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//
+//  evspin.mras.Ialpha += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ialpha_dot1 + Ialpha_dot2);
+//  evspin.mras.Ibeta += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ibeta_dot1 + Ibeta_dot2);
+//#endif
+//
+////    // prevent overflow and underflow
+////    evspin.mras.Ialpha = _clamp_f32(evspin.mras.Ialpha, -FLT_MAX, FLT_MAX);
+////    evspin.mras.Ibeta = _clamp_f32(evspin.mras.Ibeta, -FLT_MAX, FLT_MAX);
+//
+//  float Id_ada, Iq_ada;
+//  // Park transform
+//  arm_park_f32(evspin.mras.Ialpha, evspin.mras.Ibeta, &evspin.mras.Id_ada, &evspin.mras.Iq_ada, sin, cos);
 
-  // TODO DEBUG
-  evspin.mras.Iq_ada = FOC_LeakyIntegrator_f32(&evspin.dbg.mras_flt, evspin.mras.Iq_ada);
+//  // TODO DEBUG
+//  evspin.mras.Iq_ada = FOC_LeakyIntegrator_f32(&evspin.dbg.mras_flt, evspin.mras.Iq_ada);
+
 
   /* REFERENCE SYSTEM */
-  int32_t localCurrU = evspin.adc.currents[0];
-  int32_t localCurrV = evspin.adc.currents[1];
-  int32_t localCurrW = evspin.adc.currents[2];
   float Ialpha, Ibeta;
-  // Clarke transform   TODO select phases
-  arm_clarke_f32(localCurrU, localCurrV, &Ialpha, &Ibeta);
+  // Clarke transform   TODO dont compute twice
+  arm_clarke_f32(evspin.foc.currents_comp[0], evspin.foc.currents_comp[1], &Ialpha, &Ibeta);
 
   // Park transform
   arm_park_f32(Ialpha, Ibeta, &evspin.mras.Id, &evspin.mras.Iq, sin, cos);
 
-}
 
-void FOC_RunTask(void) {
-  if(evspin.run.activate_ramp == true) {
-    if(evspin.base.speed_ramp_active == false) {
-      evspin.run._ramp_initial = evspin.run.speed_target;
-      evspin.run._ramp_elapsed = 0;
+  /* ADAPTATION LAW */
+  evspin.mras.speed_error = ((evspin.mras.Id / 1000) * (evspin.mras.Iq_ada / 1000))
+                        - ((evspin.mras.Id_ada / 1000) * (evspin.mras.Iq / 1000))
+                        - (((evspin.mras.Iq / 1000) - (evspin.mras.Iq_ada / 1000))
+                            * (MOTOR_BEMF_CONSTANT / MOTOR_POLEPAIRS) * (1 / _MRAS_MOTOR_L));
 
-      evspin.base.speed_ramp_active = true;
-    }
-    else {
-      evspin.run._ramp_elapsed += 1;
+  // speed in rad/s
+  evspin.mras.speed_el_ada = FOC_PID(&evspin.mras.omega_pid, evspin.mras.speed_error);
 
-      if(evspin.run._ramp_elapsed == evspin.run.ramp_duration) {
-        evspin.foc.speed_pid.target = evspin.run.ramp_final;
-
-        evspin.base.speed_ramp_active = false;
-        evspin.run.activate_ramp = false;
-      }
-      else {
-        evspin.foc.speed_pid.target = FOC_LinearRamp(evspin.run._ramp_initial, evspin.run.ramp_final, evspin.run.ramp_duration, evspin.run._ramp_elapsed);
-      }
-    }
+  evspin.mras.angle_ada += evspin.mras.speed_el_ada * (_SWITCHING_PERIOD_MS/1000);
+  // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
+  // TODO other direction
+  if(evspin.mras.angle_ada >= PI * MOTOR_POLEPAIRS) {
+    evspin.mras.angle_ada -= 2 * PI * MOTOR_POLEPAIRS;
   }
+  evspin.mras.angle_ada_deg = evspin.mras.angle_ada * (360.0f / (2 * PI));
 
-  evspin.base.run_active = true;      // TODO ne tak casto
+  // convert rad/s to rpm   // TODO redundant?
+  evspin.mras.speed_el_ada *= 60.0f / (2 * PI);
+  // convert to mechanical speed
+  evspin.mras.speed_mech_ada = evspin.mras.speed_el_ada * (1.0f / MOTOR_POLEPAIRS);
+
+  // TODO DEBUG DAC
+//  evspin.dbg.tmp1 = evspin.mras.Iq_ada;
+//  evspin.dbg.tmp2 = evspin.foc.Iq;
+//  evspin.dbg.tmp1 = evspin.mras.Id_ada / 4;
+//  evspin.dbg.tmp2 = evspin.foc.Id / 4;
+//  evspin.dbg.tmp1 = evspin.mras.angle;
+  evspin.dbg.tmp1 = evspin.mras.angle_ada_deg;
+//  evspin.dbg.tmp1 = evspin.enc.speed_filtered;
+  evspin.dbg.tmp2 = evspin.mras.speed_mech_ada;
+
 }
 
 /**
@@ -552,52 +689,21 @@ void FOC_DQ_Limiter(void) {
  * @brief Main FOC task. Called after every current measurement conversion.
  */
 void FOC_MainControl(void) {
-  int32_t localCurrV;
-  int32_t localCurrW;
-  int32_t localCurrU;
-
-  // more than 75% duty cycle?
-  if(evspin.foc.tim.phHighest > evspin.foc.tim.compute_phase_threshold) {
-    // compute phase current with the highest duty-cycle
-    switch(evspin.foc.tim.phHighest_id) {
-      case 0:
-        localCurrV = evspin.adc.currents[1];
-        localCurrW = evspin.adc.currents[2];
-        localCurrU = -(localCurrV + localCurrW);
-        break;
-      case 1:
-        localCurrU = evspin.adc.currents[0];
-        localCurrW = evspin.adc.currents[2];
-        localCurrV = -(localCurrU + localCurrW);
-        break;
-      case 2:
-        localCurrU = evspin.adc.currents[0];
-        localCurrV = evspin.adc.currents[1];
-        localCurrW = -(localCurrU + localCurrV);
-        break;
-      default:
-        localCurrU = 0;
-        localCurrV = 0;
-        localCurrW = 0;
-        // should not happen
-        FOC_Stop();
-        break;
-    }
-  }
-  else {
-    // take raw current measurements
-    localCurrU = evspin.adc.currents[0];
-    localCurrV = evspin.adc.currents[1];
-    localCurrW = evspin.adc.currents[2];
-  }
-
   switch(evspin.state) {
   case STATE_STARTUP:
   case STATE_SYNCHRO:
     evspin.foc.angle = evspin.open.angle;
     break;
   case STATE_RUN:
+#if SENSORLESS == 1
+    evspin.foc.angle = evspin.mras.angle_ada_deg;
+#else
     evspin.foc.angle = evspin.enc.angle;
+
+    if(evspin.dbg.force_sensorless) {
+    	evspin.foc.angle = evspin.mras.angle_ada_deg;
+    }
+#endif
     break;
   default:
     break;
@@ -607,7 +713,7 @@ void FOC_MainControl(void) {
   arm_sin_cos_f32(evspin.foc.angle, &sin, &cos);
 
   // Clarke transform
-  arm_clarke_f32(localCurrU, localCurrV, &evspin.foc.Ialpha, &evspin.foc.Ibeta);
+  arm_clarke_f32(evspin.foc.currents_comp[0], evspin.foc.currents_comp[1], &evspin.foc.Ialpha, &evspin.foc.Ibeta);
 
   // Park transform
   arm_park_f32(evspin.foc.Ialpha, evspin.foc.Ibeta, &evspin.foc.Id, &evspin.foc.Iq, sin, cos);

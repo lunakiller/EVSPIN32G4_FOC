@@ -23,6 +23,7 @@ float FOC_PID(PID_t* pid, float error);
 void FOC_SystickScheduler(void);
 void FOC_ChargeBootstraps(void);
 void FOC_AlignRotor(void);
+void FOC_CurrentCompensation(void);
 void FOC_EncoderProcessing(void);
 void FOC_SpeedControl(void);
 void FOC_OpenLoop_StartUp(void);

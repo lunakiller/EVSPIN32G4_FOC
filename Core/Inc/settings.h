@@ -25,15 +25,15 @@
 #define SIMPLE_EULER                (0)                             // solve ODE using simple Euler's method (faster, less accurate)
 
 // General
-#define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
-#define DEAD_TIME                   ((uint16_t) 500)               // deadtime in ns
+#define SWITCHING_FREQUENCY         ((uint8_t)  30)                 // switching frequency in kHz
+#define DEAD_TIME                   ((uint16_t) 400)                // deadtime in ns
 
 // Motor parameters
 #define MOTOR_POLEPAIRS             ((uint8_t)  7)
 
 // Settings for the sensorless mode
-#define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms
-#define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH
+#define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms (1.01)
+#define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH (0.995)
 #define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in V.s/rad (k_e)
 #define MOTOR_ROTOR_INERTIA         ()
 
@@ -50,16 +50,16 @@
 
 // Alignment phase settings
 #define ALIGNMENT_TIME              ((uint16_t) 1000)               // alignment phase length in ms
-#define ALIGNMENT_CURRENT           ((int16_t)  1000)               // d-axis current used to align the rotor in mA
-#define ALIGNMENT_ANGLE             ((int16_t)  110)                 // alignment electrical angle [-180  179]
+#define ALIGNMENT_CURRENT           ((int16_t)  1500)               // d-axis current used to align the rotor in mA
+#define ALIGNMENT_ANGLE             ((int16_t)  60)                // alignment electrical angle [-180  179]
 
-#define STARTUP_CURRENT             ((int16_t)  500)               // d-axis current applied to start rotating in mA
+#define STARTUP_CURRENT             ((int16_t)  1200)               // d-axis current applied to start rotating in mA
 //#if OPENLOOP_START == 1
-#define STARTUP_TIME                ((uint16_t) 500)                // startup phase length in ms
-#define STARTUP_SPEED               ((int16_t)  400)
+#define STARTUP_TIME                ((uint16_t) 300)                // startup phase length in ms
+#define STARTUP_SPEED               ((int16_t)  750)
 //#endif
 
-#define SYNCHRONIZATION_TIME        ((uint16_t) 1000)               // position synchronization phase length in ms
+#define SYNCHRONIZATION_TIME        ((uint16_t) 2000)               // position synchronization phase max length in ms
 
 // moving average filter
 #define FILTER_LENGTH               ((uint8_t)  32)                 // length of the moving average filter
