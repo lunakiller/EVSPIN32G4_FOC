@@ -78,6 +78,8 @@ void ADC1_2_IRQHandler(void) {
 
     LL_ADC_ClearFlag_AWD1(hadc1.Instance);
     LL_TIM_DisableAllOutputs(TIM1);
+    // TODO error status
+    evspin.state = STATE_ERROR;
   }
   else if(LL_ADC_IsActiveFlag_OVR(hadc1.Instance)) {
 //    HAL_GPIO_TogglePin(DBG_DAC1_GPIO_Port, DBG_DAC1_Pin);

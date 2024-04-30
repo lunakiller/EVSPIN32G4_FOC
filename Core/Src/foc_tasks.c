@@ -112,13 +112,15 @@ void FOC_SystickScheduler(void) {
     evspin.dbg.voltage_v= evspin.adc.buffers.ADC1_reg_raw[V_ADC1] * evspin.adc.vdda / 4096.0f * VMOT_COEFF;
     evspin.dbg.voltage_w = evspin.adc.buffers.ADC2_reg_raw[W_ADC2] * evspin.adc.vdda / 4096.0f * VMOT_COEFF;
 
-    // TODO DEBUG - generate read events for trace
+    // TODO DEBUG SWO - generate read events for trace
 //    evspin.dbg.tmp[0] = evspin.foc.angle;
 //    evspin.dbg.tmp[1] = evspin.enc.angle;
 //    evspin.dbg.tmp[2] = evspin.foc.Iq;
 //    evspin.dbg.tmp[3] = evspin.enc.speed_filtered;
 //    evspin.dbg.tmp[0] = evspin.foc.Iq;
 //    evspin.dbg.tmp[1] = evspin.mras.Iq_ada;
+//    evspin.dbg.tmp[2] = evspin.foc.Id;
+//    evspin.dbg.tmp[3] = evspin.mras.Id_ada;
 //    evspin.dbg.tmp[2] = evspin.foc.Valpha;
 //    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
     evspin.dbg.tmp[0] = evspin.foc.Vq;
@@ -261,9 +263,11 @@ void FOC_EncoderProcessing(void) {
     evspin.enc.angle -= 360.0f * MOTOR_POLEPAIRS;
   }
 
-  // TODO DEBUG
-//  evspin.dbg.tmp1 = evspin.enc.mech_pos_diff * 256;
+  // TODO DEBUG DAC
+//  evspin.dbg.tmp1 = evspin.foc.Iq;
 //	evspin.dbg.tmp2 = evspin.enc.speed_filtered;
+//  evspin.dbg.tmp1 = evspin.enc.angle;
+//	evspin.dbg.tmp2 = evspin.open.angle;
 
   if(evspin.dbg.open_loop_enable == false) {
 //    evspin.foc.angle = evspin.enc.angle;
@@ -626,11 +630,9 @@ void FOC_MainControl(void) {
 
   evspin.foc.tim.phHighest = _max3_i32(evspin.foc.tim.phU, evspin.foc.tim.phV, evspin.foc.tim.phW, &evspin.foc.tim.phHighest_id);
 
-  // TODO DEBUG
-  evspin.dbg.tmp1 = localCurrU;
-  evspin.dbg.tmp2 = localCurrV;
-//  evspin.dbg.tmp1 = evspin.foc.Vq / 4;
-//  evspin.dbg.tmp2 = evspin.foc.Vq_sat / 4;
+  // TODO DEBUG DAC
+//  evspin.dbg.tmp1 = evspin.foc.Vd_sat / 8;
+//  evspin.dbg.tmp2 = evspin.mras.Id_ada / 8;
 }
 
 /**
@@ -665,7 +667,7 @@ void FOC_Modulator(float Valpha, float Vbeta, int32_t* Va, int32_t* Vb, int32_t*
   else if(*Vc < 0)
     *Vc = 0;
 
-  // TODO DEBUG
+  // TODO DEBUG DAC
 //  evspin.dbg.tmp1 = tmpA / 8;
 //  evspin.dbg.tmp2 = *Va / 4;
 

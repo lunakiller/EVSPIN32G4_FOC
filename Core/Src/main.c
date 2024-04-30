@@ -153,6 +153,7 @@ int main(void)
   EVSPIN32G4_Init();
 //  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 
+  // TODO DEBUG DAC settings
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
   HAL_DMA_Start(&hdma_tim6_up, (uint32_t)&(evspin.dbg.tmp1), (uint32_t)&DAC1->DHR12R1, 1);
@@ -1103,6 +1104,9 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
 
+  /*Configure GPIO pin Output Level */
+  HAL_GPIO_WritePin(DBG_TRG_GPIO_Port, DBG_TRG_Pin, GPIO_PIN_RESET);
+
   /*Configure GPIO pin : LED2_Pin */
   GPIO_InitStruct.Pin = LED2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -1129,6 +1133,13 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LED3_GPIO_Port, &GPIO_InitStruct);
+
+  /*Configure GPIO pin : DBG_TRG_Pin */
+  GPIO_InitStruct.Pin = DBG_TRG_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(DBG_TRG_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ENC_INDEX_Pin */
   GPIO_InitStruct.Pin = ENC_INDEX_Pin;

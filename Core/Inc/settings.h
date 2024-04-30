@@ -20,9 +20,9 @@
 
 
 /* Library settings */
-#define SENSORLESS                  (0)                            // 1 - Sensroless, 0 - Encoder
-#define OPENLOOP_START              (0)                            // 1 - enable open-loop start-up, 0 - disable
-#define SIMPLE_EULER                (0)                            // solve ODE using simple Euler's method (faster, less accurate)
+#define SENSORLESS                  (0)                             // 1 - Sensorless, 0 - Encoder
+#define OPENLOOP_START              (1)                             // 1 - enable open-loop start-up, 0 - disable
+#define SIMPLE_EULER                (0)                             // solve ODE using simple Euler's method (faster, less accurate)
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                // switching frequency in kHz
@@ -90,7 +90,7 @@
 #define VMOT_COEFF                  ((float)    _VMOT_COEFF)        // coefficient to compute applied voltages from ADC
 
 // Current sensing
-#define CS_SHUNT_VALUE              ((float)    0.02)              // shunt in Ohms
+#define CS_SHUNT_VALUE              ((float)    0.02)               // shunt in Ohms
 #define CS_R_SHUNTNtoOPN            ((uint32_t) 1500)               // resistor between negative shunt output and negative OPAMP input in Ohms
 #define CS_R_OPNtoOPO               ((uint32_t) 11000)              // resistor between negative OPAMP input and OPAMP output in Ohms
 #define CS_GAIN                     ((float)    _CS_GAIN)           // current sensing amplifier gain

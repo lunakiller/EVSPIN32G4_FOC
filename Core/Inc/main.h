@@ -112,6 +112,8 @@ void Error_Handler(void);
 #define DRV_SCL_GPIO_Port GPIOC
 #define DRV_SDA_Pin GPIO_PIN_9
 #define DRV_SDA_GPIO_Port GPIOC
+#define DBG_TRG_Pin GPIO_PIN_8
+#define DBG_TRG_GPIO_Port GPIOA
 #define STLINK_TX_Pin GPIO_PIN_9
 #define STLINK_TX_GPIO_Port GPIOA
 #define STLINK_RX_Pin GPIO_PIN_10
