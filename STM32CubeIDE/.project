@@ -197,31 +197,6 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_utils.c</locationURI>
 		</link>
 		<link>
-			<name>Drivers/STSPIN32G4/stspin32g4.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STSPIN32G4/stspin32g4.c</locationURI>
-		</link>
-		<link>
-			<name>Application/User/Core/foc_functions.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_functions.c</locationURI>
-		</link>
-		<link>
-			<name>Application/User/Core/foc_handlers.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_handlers.c</locationURI>
-		</link>
-		<link>
-			<name>Application/User/Core/foc_periodic.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_periodic.c</locationURI>
-		</link>
-		<link>
-			<name>Application/User/Core/foc_tools.c</name>
-			<type>1</type>
-			<location>/home/lunakiller/PROJECTS/EVSPIN32G4_FOC/Core/Src/foc_tools.c</location>
-		</link>
-		<link>
 			<name>Application/User/Core/main.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/main.c</locationURI>
@@ -235,11 +210,6 @@
 			<name>Application/User/Core/stm32g4xx_it.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/stm32g4xx_it.c</locationURI>
-		</link>
-		<link>
-			<name>Application/User/Core/swo_debug.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/swo_debug.c</locationURI>
 		</link>
 		<link>
 			<name>Drivers/CMSIS/DSP/BasicMathFunctions.c</name>
@@ -265,6 +235,36 @@
 			<name>Drivers/CMSIS/DSP/FilteringFunctions.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/CMSIS/DSP/Source/FilteringFunctions/FilteringFunctions.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/STSPIN32G4/stspin32g4.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/STSPIN32G4/stspin32g4.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/Src/foc_functions.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/Src/foc_functions.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/Src/foc_handlers.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/Src/foc_handlers.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/Src/foc_periodic.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/Src/foc_periodic.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/Src/foc_tools.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/Src/foc_tools.c</locationURI>
+		</link>
+		<link>
+			<name>Drivers/FOC_MRAS/Src/swo_debug.c</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/Drivers/FOC_MRAS/Src/swo_debug.c</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

@@ -523,6 +523,7 @@ void FOC_MRAS(void) {
 
   /* ADAPTIVE SYSTEM */
   float sin, cos;
+  // TODO use CORDIC
   arm_sin_cos_f32(evspin.mras.angle_ada_deg, &sin, &cos);
 //  arm_sin_cos_f32(evspin.mras.angle, &sin, &cos);
 
