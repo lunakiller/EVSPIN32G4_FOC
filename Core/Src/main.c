@@ -145,7 +145,6 @@ int main(void)
   // init board
   EVSPIN32G4_AssignADCs(&hadc1, &hdma_adc1, &hadc2, &hdma_adc2);
   EVSPIN32G4_AssignOPAMPs(&hopamp1, &hopamp2, &hopamp3);
-//  EVSPIN32G4_AssignWWDG(&hwwdg);
   EVSPIN32G4_Init();
 
   // DEBUG DAC settings

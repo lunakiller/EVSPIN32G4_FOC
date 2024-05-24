@@ -171,7 +171,6 @@ typedef struct {
   OPAMP_HandleTypeDef* opamp1;
   OPAMP_HandleTypeDef* opamp2;
   OPAMP_HandleTypeDef* opamp3;
-//  WWDG_HandleTypeDef* wwdg;
 } FOC_Periph_t;
 
 // debug structure

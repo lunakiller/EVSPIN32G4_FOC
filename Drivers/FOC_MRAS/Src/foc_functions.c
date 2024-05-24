@@ -670,11 +670,14 @@ void ENC_Setup(void) {
 void WWDG_Setup(void) {
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_WWDG);
 
-  LL_WWDG_SetPrescaler(WWDG, LL_WWDG_PRESCALER_1);
-  LL_WWDG_SetWindow(WWDG, 64);
-  LL_WWDG_SetCounter(WWDG, 95);
+  NVIC_SetPriority(WWDG_IRQn, 0);
+  NVIC_EnableIRQ(WWDG_IRQn);
+
+  LL_WWDG_SetPrescaler(WWDG, LL_WWDG_PRESCALER_2);
   LL_WWDG_EnableIT_EWKUP(WWDG);
-//  LL_WWDG_Enable(WWDG);
+  LL_WWDG_SetWindow(WWDG, 127);
+  LL_WWDG_SetCounter(WWDG, 95);
+  LL_WWDG_Enable(WWDG);
 }
 
 /**
@@ -712,22 +715,13 @@ void EVSPIN32G4_AssignOPAMPs(OPAMP_HandleTypeDef* opamp1, OPAMP_HandleTypeDef* o
 }
 
 /**
- * @brief Assign pointer to WWDG handle.
- */
-//void EVSPIN32G4_AssignWWDG(WWDG_HandleTypeDef* wwdg) {
-//  evspin.periph.wwdg = wwdg;
-//
-//  return;
-//}
-
-/**
  * @brief Initialize EVSPIN32G4 board.
  */
 void EVSPIN32G4_Init(void) {
   // check peripheral pointers
   if(evspin.periph.adc1 == NULL || evspin.periph.adc2 == NULL || evspin.periph.dma_adc1 == NULL ||
      evspin.periph.dma_adc2 == NULL || evspin.periph.opamp1 == NULL || evspin.periph.opamp2 == NULL ||
-     evspin.periph.opamp3 == NULL /*|| evspin.periph.wwdg == NULL*/)
+     evspin.periph.opamp3 == NULL)
   {
     DEBUG_Breakpoint();
     return;
