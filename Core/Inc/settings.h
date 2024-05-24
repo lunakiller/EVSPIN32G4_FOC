@@ -20,22 +20,22 @@
 
 
 /* Library settings */
-#define SENSORLESS                  (0)                             // 1 - Sensorless, 0 - Encoder
+#define SENSORLESS                  (1)                             // 1 - Sensorless, 0 - Encoder
 #define OPENLOOP_START              (1)                             // 1 - enable open-loop start-up, 0 - disable
 #define SIMPLE_EULER                (0)                             // solve ODE using simple Euler's method (faster, less accurate)
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                 // switching frequency in kHz
-#define DEAD_TIME                   ((uint16_t) 400)                // deadtime in ns
+#define DEAD_TIME                   ((uint16_t) 300)                // deadtime in ns
 
 // Motor parameters
 #define MOTOR_POLEPAIRS             ((uint8_t)  7)
 
 // Settings for the sensorless mode
+#define PHASE_TO_PHASE              (1)                             // 1 - resistance and inductance is internally halved
 #define MOTOR_TERMINAL_RESISTANCE   ((float)    1.01)               // in Ohms (1.01)
 #define MOTOR_TERMINAL_INDUCTANCE   ((float)    0.995)              // in mH (0.995)
 #define MOTOR_BEMF_CONSTANT         ((float)    BEMF_KV_TO_KE(105)) // in V.s/rad (k_e)
-#define MOTOR_ROTOR_INERTIA         ()
 
 // Encoder parameters
 #define ENCODER_PULSES              ((uint16_t) 1024)
@@ -61,11 +61,9 @@
 
 #define SYNCHRONIZATION_TIME        ((uint16_t) 2000)               // position synchronization phase max length in ms
 
-// moving average filter
-#define FILTER_LENGTH               ((uint8_t)  32)                 // length of the moving average filter
-
 // DQ limiter settings
 #define DQLIM_MAX_VOLTAGE           ((uint8_t)  85)                 // maximal DQ voltage in % of Vbus
+#define DQLIM_CCR_LIMIT             ((uint8_t)  40)
 
 // speed PID
 #define PID_SPEED_KP                ((float)    1)
@@ -122,8 +120,12 @@
 #define _VBUS_COEFF                 ((float)(VBUS_R_VtoADC + VBUS_R_ADCtoGND) / (float)(VBUS_R_ADCtoGND))
 #define _VMOT_COEFF                 ((float)(VMOT_R_VtoADC + VMOT_R_ADCtoGND) / (float)(VMOT_R_ADCtoGND))
 #define _SWITCHING_PERIOD_MS        (1.0f / (float)SWITCHING_FREQUENCY)
-#define _MRAS_MOTOR_R               (MOTOR_TERMINAL_RESISTANCE / 2.0f)
-#define _MRAS_MOTOR_L               (MOTOR_TERMINAL_INDUCTANCE / 1000.0f / 2.0f)
-
+#if PHASE_TO_PHASE == 1
+  #define _MRAS_MOTOR_R               (MOTOR_TERMINAL_RESISTANCE / 2.0f)
+  #define _MRAS_MOTOR_L               (MOTOR_TERMINAL_INDUCTANCE / 1000.0f / 2.0f)
+#else
+  #define _MRAS_MOTOR_R               MOTOR_TERMINAL_RESISTANCE
+  #define _MRAS_MOTOR_L               MOTOR_TERMINAL_INDUCTANCE / 1000.0f
+#endif
 
 #endif  /* __SETTINGS_H */

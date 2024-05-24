@@ -163,6 +163,10 @@ int main(void)
   HAL_TIM_Base_Start(&htim6);
   HAL_TIM_Base_Start(&htim7);
 
+  // TODO DEBUG
+  evspin.dbg.Kp = 10;
+  evspin.dbg.Ki = 2;
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -179,16 +183,6 @@ int main(void)
       stop = false;
 
       FOC_Stop();
-    }
-
-    if(evspin.dbg.open_loop_enable) {
-      for(int angle = -1800; angle < 1800; angle += evspin.dbg.open_loop_step) {
-        if(!evspin.dbg.open_loop_enable || stop == true)
-          break;
-        if(evspin.dbg.open_loop_step > 0)
-          evspin.foc.angle = angle/10;
-        HAL_Delay(1);
-      }
     }
     /* USER CODE END WHILE */
 

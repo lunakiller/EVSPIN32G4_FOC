@@ -29,21 +29,6 @@ float FOC_LeakyIntegrator_f32(LPF_f32_t* lpf, float input) {
   return out;
 }
 
-float FOC_MovingAverage(float input) {
-  static float buffer[FILTER_LENGTH] = {0};
-  static uint8_t index = 0;
-  float sum = 0;
-
-  buffer[index] = input;
-  index = (index + 1) % FILTER_LENGTH;
-
-  for(uint8_t i = 0; i < FILTER_LENGTH; ++i) {
-    sum += buffer[i];
-  }
-
-  return (sum / (float)FILTER_LENGTH);
-}
-
 int32_t FOC_LinearRamp(int32_t start, int32_t final, int32_t duration, float elapsed) {
   return (((final - start) * elapsed / (float)duration) + start);
 }
@@ -61,12 +46,6 @@ void FOC_PID_Init(PID_t* pid, float Kp, float Ki, float Kd, int32_t limit) {
 	pid->max_output = limit;
 	pid->saturated = false;
 	pid->target = 0;
-//	if(Ki != 0) {
-//		pid->i_active = true;
-//	}
-//	else {
-//		pid->i_active = false;
-//	}
 }
 
 /**
@@ -200,14 +179,15 @@ void FOC_AlignRotor(void) {
 
       evspin.base.alignment_active = false;
 
-#if SENSORLESS == 1 || OPENLOOP_START == 1
-      // TODO DEBUG init cond
+#if SENSORLESS == 1
+      evspin.open.angle = ALIGNMENT_ANGLE;
       evspin.mras.Id_ada = 0;
       evspin.mras.Iq_ada = STARTUP_CURRENT;
       evspin.mras.speed_mech_ada = 0;
       evspin.mras.angle_ada_deg = ALIGNMENT_ANGLE;
       evspin.mras.angle_ada = ALIGNMENT_ANGLE * 2 * PI / 360.0f;
-
+#endif
+#if OPENLOOP_START == 1
       evspin.state = STATE_STARTUP;
 #else
       evspin.state = STATE_RUN;
@@ -309,16 +289,15 @@ void FOC_EncoderProcessing(void) {
   if(evspin.enc.angle >= 180.0f * MOTOR_POLEPAIRS) {
     evspin.enc.angle -= 360.0f * MOTOR_POLEPAIRS;
   }
+  else if(evspin.enc.angle <= 180.0f * MOTOR_POLEPAIRS) {
+    evspin.enc.angle += 360.0f * MOTOR_POLEPAIRS;
+  }
 
   // TODO DEBUG DAC
 //  evspin.dbg.tmp1 = evspin.foc.Iq;
 //	evspin.dbg.tmp2 = evspin.enc.speed_filtered;
 //  evspin.dbg.tmp1 = evspin.enc.angle;
 //	evspin.dbg.tmp2 = evspin.open.angle;
-
-  if(evspin.dbg.open_loop_enable == false) {
-//    evspin.foc.angle = evspin.enc.angle;
-  }
 
   if(evspin.enc.speed_filtered > 2000) {
     DEBUG_Breakpoint();
@@ -378,6 +357,9 @@ void FOC_OpenLoop_StartUp(void) {
       // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
       if(evspin.open.angle >= 180.0f * MOTOR_POLEPAIRS) {
         evspin.open.angle -= 360.0f * MOTOR_POLEPAIRS;
+      }
+      else if(evspin.open.angle <= 180.0f * MOTOR_POLEPAIRS) {
+        evspin.open.angle += 360.0f * MOTOR_POLEPAIRS;
       }
     }
     else {
@@ -504,9 +486,9 @@ void FOC_MRAS(void) {
   // TODO DEBUG
   evspin.mras.angle = evspin.foc.angle;
   if(evspin.state == STATE_RUN) {
-    evspin.mras.speed = evspin.run.speed;   // TODO only to compare
-//    evspin.mras.speed = evspin.mras.speed_ada;
+    evspin.mras.speed = evspin.run.speed;   // only to compare
   }
+
   /* ADAPTIVE SYSTEM */
   float sin, cos;
   arm_sin_cos_f32(evspin.mras.angle_ada_deg, &sin, &cos);
@@ -515,91 +497,87 @@ void FOC_MRAS(void) {
   // convert rpm to rad/s
   int32_t speed_mech_rad = evspin.mras.speed_mech_ada * 2 * PI / 60.0f;
 
-  float Id_dot1, Iq_dot1;
-#if SIMPLE_EULER == 1
-  // (Simple) Euler's method
-  Id_dot1 = evspin.mras.Id_ada + ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-             + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
-             + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
-  Iq_dot1 = evspin.mras.Iq_ada + ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-            - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
-            - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-            + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
-
-  evspin.mras.Id_ada = Id_dot1;
-  evspin.mras.Iq_ada = Iq_dot1;
-#else
-  // Modified Euler's method
-  Id_dot1 = ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-          + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
-          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-  Iq_dot1 = ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-          - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
-          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-
-  float Id_dot2, Iq_dot2;
-  float Id_pred = evspin.mras.Id_ada + (_SWITCHING_PERIOD_MS/1000) * Id_dot1;
-  float Iq_pred = evspin.mras.Iq_ada + (_SWITCHING_PERIOD_MS/1000) * Iq_dot1;
-
-  Id_dot2 = ((Id_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-          + (speed_mech_rad * MOTOR_POLEPAIRS * Iq_pred)
-          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-  Iq_dot2 = ((Iq_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-          - (speed_mech_rad * MOTOR_POLEPAIRS * Id_pred)
-          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-
-  evspin.mras.Id_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Id_dot1 + Id_dot2);
-  evspin.mras.Iq_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Iq_dot1 + Iq_dot2);
-#endif
-
-//  float Ialpha_dot1, Ibeta_dot1;
+//  float Id_dot1, Iq_dot1;
 //#if SIMPLE_EULER == 1
 //  // (Simple) Euler's method
-//  Ialpha_dot1 = evspin.mras.Ialpha + ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//             + (speed_mech_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//             + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
-//  Ibeta_dot1 = evspin.mras.Ibeta + ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//            - (speed_mech_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//            + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+//  Id_dot1 = evspin.mras.Id_ada + ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//             + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
+//             + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+//  Iq_dot1 = evspin.mras.Iq_ada + ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//            - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
+//            - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//            + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
 //
-//  evspin.mras.Ialpha = Ialpha_dot1;
-//  evspin.mras.Ibeta = Ibeta_dot1;
+//  evspin.mras.Id_ada = Id_dot1;
+//  evspin.mras.Iq_ada = Iq_dot1;
 //#else
 //  // Modified Euler's method
-//  Ialpha_dot1 = ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//              + (speed_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//  Ibeta_dot1 = ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//             - (speed_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Id_dot1 = ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//          + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
+//          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Iq_dot1 = ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//          - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
+//          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
 //
-//  float Ialpha_dot2, Ibeta_dot2;
-//  float Ialpha_pred = evspin.mras.Ialpha + (_SWITCHING_PERIOD_MS/1000) * Ialpha_dot1;
-//  float Ibeta_pred = evspin.mras.Ibeta + (_SWITCHING_PERIOD_MS/1000) * Ibeta_dot1;
+//  float Id_dot2, Iq_dot2;
+//  float Id_pred = evspin.mras.Id_ada + (_SWITCHING_PERIOD_MS/1000) * Id_dot1;
+//  float Iq_pred = evspin.mras.Iq_ada + (_SWITCHING_PERIOD_MS/1000) * Iq_dot1;
 //
-//  Ialpha_dot2 = ((Ialpha_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//              + (speed_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//  Ibeta_dot2 = ((Ibeta_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//             - (speed_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Id_dot2 = ((Id_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//          + (speed_mech_rad * MOTOR_POLEPAIRS * Iq_pred)
+//          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+//  Iq_dot2 = ((Iq_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+//          - (speed_mech_rad * MOTOR_POLEPAIRS * Id_pred)
+//          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+//          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
 //
-//  evspin.mras.Ialpha += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ialpha_dot1 + Ialpha_dot2);
-//  evspin.mras.Ibeta += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ibeta_dot1 + Ibeta_dot2);
+//  evspin.mras.Id_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Id_dot1 + Id_dot2);
+//  evspin.mras.Iq_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Iq_dot1 + Iq_dot2);
 //#endif
-//
-////    // prevent overflow and underflow
-////    evspin.mras.Ialpha = _clamp_f32(evspin.mras.Ialpha, -FLT_MAX, FLT_MAX);
-////    evspin.mras.Ibeta = _clamp_f32(evspin.mras.Ibeta, -FLT_MAX, FLT_MAX);
-//
-//  float Id_ada, Iq_ada;
-//  // Park transform
-//  arm_park_f32(evspin.mras.Ialpha, evspin.mras.Ibeta, &evspin.mras.Id_ada, &evspin.mras.Iq_ada, sin, cos);
 
-//  // TODO DEBUG
-//  evspin.mras.Iq_ada = FOC_LeakyIntegrator_f32(&evspin.dbg.mras_flt, evspin.mras.Iq_ada);
+  float Ialpha_dot1, Ibeta_dot1;
+#if SIMPLE_EULER == 1
+  // (Simple) Euler's method
+  Ialpha_dot1 = evspin.mras.Ialpha + ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+             + (speed_mech_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+             + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+  Ibeta_dot1 = evspin.mras.Ibeta + ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+            - (speed_mech_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+            + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
+
+  evspin.mras.Ialpha = Ialpha_dot1;
+  evspin.mras.Ibeta = Ibeta_dot1;
+#else
+  // Modified Euler's method
+  Ialpha_dot1 = ((evspin.mras.Ialpha * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+              + (speed_mech_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+  Ibeta_dot1 = ((evspin.mras.Ibeta * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+             - (speed_mech_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+
+  float Ialpha_dot2, Ibeta_dot2;
+  float Ialpha_pred = evspin.mras.Ialpha + (_SWITCHING_PERIOD_MS/1000) * Ialpha_dot1;
+  float Ibeta_pred = evspin.mras.Ibeta + (_SWITCHING_PERIOD_MS/1000) * Ibeta_dot1;
+
+  Ialpha_dot2 = ((Ialpha_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+              + (speed_mech_rad * sin * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+              + ((evspin.foc.Valpha /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+  Ibeta_dot2 = ((Ibeta_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
+             - (speed_mech_rad * cos * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
+             + ((evspin.foc.Vbeta /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
+
+  evspin.mras.Ialpha += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ialpha_dot1 + Ialpha_dot2);
+  evspin.mras.Ibeta += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Ibeta_dot1 + Ibeta_dot2);
+#endif
+
+//    // prevent overflow and underflow
+//    evspin.mras.Ialpha = _clamp_f32(evspin.mras.Ialpha, -FLT_MAX, FLT_MAX);
+//    evspin.mras.Ibeta = _clamp_f32(evspin.mras.Ibeta, -FLT_MAX, FLT_MAX);
+
+  // Park transform
+  arm_park_f32(evspin.mras.Ialpha, evspin.mras.Ibeta, &evspin.mras.Id_ada, &evspin.mras.Iq_ada, sin, cos);
 
 
   /* REFERENCE SYSTEM */
@@ -649,7 +627,7 @@ void FOC_MRAS(void) {
  * @brief DQ Limiter (also called Circle limitation) with priority on the D-axis.
  */
 void FOC_DQ_Limiter(void) {
-  float d_squared, q_squared, sum_squared;
+  float d_squared, q_squared, sum_squared, Vq_limit_squared;
 
   d_squared = evspin.foc.Vd * evspin.foc.Vd;
   q_squared = evspin.foc.Vq * evspin.foc.Vq;
@@ -669,10 +647,18 @@ void FOC_DQ_Limiter(void) {
       evspin.foc.Vd_sat = evspin.foc.Vd;
     }
 
-    evspin.foc.Vq_sat = _min_f32(q_squared, sqrtf(evspin.foc.limit_squared - d_squared));
+    // compute the squared limit for Vq
+    Vq_limit_squared = evspin.foc.limit_squared - d_squared;
 
-    if(evspin.foc.Vq < 0) {
-      evspin.foc.Vq_sat = -evspin.foc.Vq_sat;
+    // q-axis voltage clamping
+    if (q_squared > Vq_limit_squared) {
+      evspin.foc.Vq_sat = sqrtf(Vq_limit_squared);
+
+      if (evspin.foc.Vq < 0) {
+        evspin.foc.Vq_sat = -evspin.foc.Vq_sat;
+      }
+    } else {
+      evspin.foc.Vq_sat = evspin.foc.Vq;
     }
 
     evspin.base.dq_limiter_active = true;
@@ -762,20 +748,16 @@ void FOC_Modulator(float Valpha, float Vbeta, int32_t* Va, int32_t* Vb, int32_t*
 
   if(*Va > evspin.foc.tim.maxCCR)
     *Va = evspin.foc.tim.maxCCR;
-  else if(*Va < 0)
-    *Va = 0;
+  else if(*Va < DQLIM_CCR_LIMIT)     // TODO
+    *Va = DQLIM_CCR_LIMIT;
   if(*Vb > evspin.foc.tim.maxCCR)
     *Vb = evspin.foc.tim.maxCCR;
-  else if(*Vb < 0)
-    *Vb = 0;
+  else if(*Vb < DQLIM_CCR_LIMIT)
+    *Vb = DQLIM_CCR_LIMIT;
   if(*Vc > evspin.foc.tim.maxCCR)
     *Vc = evspin.foc.tim.maxCCR;
-  else if(*Vc < 0)
-    *Vc = 0;
-
-  // TODO DEBUG DAC
-//  evspin.dbg.tmp1 = tmpA / 8;
-//  evspin.dbg.tmp2 = *Va / 4;
+  else if(*Vc < DQLIM_CCR_LIMIT)
+    *Vc = DQLIM_CCR_LIMIT;
 
   return;
 }

@@ -175,8 +175,7 @@ typedef struct {
 	int32_t tmp1, tmp2, int_angle;
 	LPF_f32_t mras_flt;
 	bool force_sensorless;
-	bool open_loop_enable;
-	int32_t open_loop_step;
+	float Kp, Ki;
 } Debug_t;
 
 typedef struct {
