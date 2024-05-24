@@ -1,6 +1,8 @@
 /*
  * foc_functions.h
  *
+ *  Procedures that execute only once per motor start.
+ *
  *  Created on: Mar 29, 2024
  *      Author: lunakiller
  *
@@ -24,7 +26,7 @@ void EVSPIN32G4_AssignADCs(ADC_HandleTypeDef* adc1, DMA_HandleTypeDef* dma_adc1,
                           ADC_HandleTypeDef* adc2, DMA_HandleTypeDef* dma_adc2);
 void EVSPIN32G4_AssignOPAMPs(OPAMP_HandleTypeDef* opamp1, OPAMP_HandleTypeDef* opamp2,
                              OPAMP_HandleTypeDef* opamp3);
-void EVSPIN32G4_AssignWWDG(WWDG_HandleTypeDef* wwdg);
+//void EVSPIN32G4_AssignWWDG(WWDG_HandleTypeDef* wwdg);
 void EVSPIN32G4_Init(void);
 
 #endif /* __FOC_FUNCTIONS_H */

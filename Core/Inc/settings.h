@@ -1,6 +1,8 @@
 /*
  * settings.h
  *
+ *  Control software settings.
+ *
  *  Created on: Mar 4, 2024
  *      Author: lunakiller
  *
@@ -22,7 +24,8 @@
 /* Library settings */
 #define SENSORLESS                  (1)                             // 1 - Sensorless, 0 - Encoder
 #define OPENLOOP_START              (1)                             // 1 - enable open-loop start-up, 0 - disable
-#define SIMPLE_EULER                (0)                             // solve ODE using simple Euler's method (faster, less accurate)
+#define SIMPLE_EULER                (0)                             // 1 - solve ODE using simple Euler's method (faster, less accurate)
+#define DEBUG_DAC                   (1)                             // 1 - enable debug DAC outputs, 0 - disable
 
 // General
 #define SWITCHING_FREQUENCY         ((uint8_t)  30)                 // switching frequency in kHz
@@ -63,19 +66,23 @@
 
 // DQ limiter settings
 #define DQLIM_MAX_VOLTAGE           ((uint8_t)  85)                 // maximal DQ voltage in % of Vbus
-#define DQLIM_CCR_LIMIT             ((uint8_t)  40)
+#define DQLIM_CCR_LIMIT             ((uint8_t)  40)                 // safety clamping of the TIM->CNT value
 
 // speed PID
 #define PID_SPEED_KP                ((float)    1)
 #define PID_SPEED_KI                ((float)    0.02)
 #define PID_SPEED_KD                ((float)    0)
-#define PID_SPEED_LIMIT             ((float)    SW_OVERCURRENT_THRESHOLD)        // TODO
+#define PID_SPEED_LIMIT             ((float)    SW_OVERCURRENT_THRESHOLD)
 
 // D-Q current PIDs
-#define PID_CURRENT_KP							((float)    16)						// 1
-#define PID_CURRENT_KI							((float)    1)						// 0.1
+#define PID_CURRENT_KP							((float)    16)
+#define PID_CURRENT_KI							((float)    1)
 #define PID_CURRENT_KD							((float)    0)
-#define PID_CURRENT_LIMIT						((float)    35000)				// TODO
+#define PID_CURRENT_LIMIT						((float)    35000)				      // maximum PID controller output voltage for modulator in mV
+
+// MRAS observer PI
+#define PI_MRAS_KP                  ((float)    10)
+#define PI_MRAS_KI                  ((float)    2)
 
 // VBUS divider
 #define VBUS_R_VtoADC               ((uint32_t) 72300)              // resistor between VM and ADC input in Ohms
@@ -99,10 +106,9 @@
 #define ADC2_REG_CHANNELS           ((uint8_t)  3)
 #define ADC2_INJ_CHANNELS           ((uint8_t)  1)
 
-#define CS_OFFSET_CALIB_AVG         ((uint8_t) 16)                  // number of samples for averaging
+#define CS_OFFSET_CALIB_AVG         ((uint8_t) 16)                  // number of OPAMP offset samples for averaging
 
-
-
+// ADC channel assignments for EVSPIN32G4
 #define VBUS_ADC1_CHANNEL           ADC_CHANNEL_1
 #define U_ADC1_CHANNEL              ADC_CHANNEL_6
 #define V_ADC1_CHANNEL              ADC_CHANNEL_7

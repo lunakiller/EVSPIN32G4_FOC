@@ -167,11 +167,6 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_uart_ex.c</locationURI>
 		</link>
 		<link>
-			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_hal_wwdg.c</name>
-			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_hal_wwdg.c</locationURI>
-		</link>
-		<link>
 			<name>Drivers/STM32G4xx_HAL_Driver/stm32g4xx_ll_adc.c</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/Drivers/STM32G4xx_HAL_Driver/Src/stm32g4xx_ll_adc.c</locationURI>
@@ -217,9 +212,14 @@
 			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_handlers.c</locationURI>
 		</link>
 		<link>
-			<name>Application/User/Core/foc_tasks.c</name>
+			<name>Application/User/Core/foc_periodic.c</name>
 			<type>1</type>
-			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_tasks.c</locationURI>
+			<locationURI>PARENT-1-PROJECT_LOC/Core/Src/foc_periodic.c</locationURI>
+		</link>
+		<link>
+			<name>Application/User/Core/foc_tools.c</name>
+			<type>1</type>
+			<location>/home/lunakiller/PROJECTS/EVSPIN32G4_FOC/Core/Src/foc_tools.c</location>
 		</link>
 		<link>
 			<name>Application/User/Core/main.c</name>

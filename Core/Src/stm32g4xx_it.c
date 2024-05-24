@@ -61,7 +61,7 @@ extern DMA_HandleTypeDef hdma_adc2;
 extern DMA_HandleTypeDef hdma_tim6_up;
 extern DMA_HandleTypeDef hdma_tim7_up;
 /* USER CODE BEGIN EV */
-extern WWDG_HandleTypeDef hwwdg;
+//extern WWDG_HandleTypeDef hwwdg;
 extern Board_Settings_t evspin;
 /* USER CODE END EV */
 

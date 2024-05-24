@@ -63,8 +63,6 @@ DMA_HandleTypeDef hdma_tim7_up;
 
 UART_HandleTypeDef huart1;
 
-WWDG_HandleTypeDef hwwdg;
-
 /* USER CODE BEGIN PV */
 Board_Settings_t evspin = {0};
 
@@ -149,15 +147,15 @@ int main(void)
   // init board
   EVSPIN32G4_AssignADCs(&hadc1, &hdma_adc1, &hadc2, &hdma_adc2);
   EVSPIN32G4_AssignOPAMPs(&hopamp1, &hopamp2, &hopamp3);
-  EVSPIN32G4_AssignWWDG(&hwwdg);
+//  EVSPIN32G4_AssignWWDG(&hwwdg);
   EVSPIN32G4_Init();
 //  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 
   // TODO DEBUG DAC settings
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
-  HAL_DMA_Start(&hdma_tim6_up, (uint32_t)&(evspin.dbg.tmp1), (uint32_t)&DAC1->DHR12R1, 1);
-  HAL_DMA_Start(&hdma_tim7_up, (uint32_t)&(evspin.dbg.tmp2), (uint32_t)&DAC1->DHR12R2, 1);
+  HAL_DMA_Start(&hdma_tim6_up, (uint32_t)&(evspin.dbg.dac1), (uint32_t)&DAC1->DHR12R1, 1);
+  HAL_DMA_Start(&hdma_tim7_up, (uint32_t)&(evspin.dbg.dac2), (uint32_t)&DAC1->DHR12R2, 1);
   __HAL_TIM_ENABLE_DMA(&htim6, TIM_DMA_UPDATE);
   __HAL_TIM_ENABLE_DMA(&htim7, TIM_DMA_UPDATE);
   HAL_TIM_Base_Start(&htim6);
@@ -1027,18 +1025,17 @@ static void MX_WWDG_Init(void)
 
   /* USER CODE END WWDG_Init 0 */
 
+  /* Peripheral clock enable */
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_WWDG);
+
   /* USER CODE BEGIN WWDG_Init 1 */
 
   /* USER CODE END WWDG_Init 1 */
-  hwwdg.Instance = WWDG;
-  hwwdg.Init.Prescaler = WWDG_PRESCALER_1;
-  hwwdg.Init.Window = 64;
-  hwwdg.Init.Counter = 95;
-  hwwdg.Init.EWIMode = WWDG_EWI_ENABLE;
-  if (HAL_WWDG_Init(&hwwdg) != HAL_OK)
-  {
-    Error_Handler();
-  }
+  LL_WWDG_SetCounter(WWDG, 95);
+  LL_WWDG_Enable(WWDG);
+  LL_WWDG_SetPrescaler(WWDG, LL_WWDG_PRESCALER_1);
+  LL_WWDG_SetWindow(WWDG, 64);
+  LL_WWDG_EnableIT_EWKUP(WWDG);
   /* USER CODE BEGIN WWDG_Init 2 */
 
   /* USER CODE END WWDG_Init 2 */
@@ -1132,7 +1129,7 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pin = DBG_TRG_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(DBG_TRG_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pin : ENC_INDEX_Pin */

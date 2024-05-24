@@ -9,8 +9,7 @@
 #ifndef __TYPEDEFS_H
 #define __TYPEDEFS_H
 
-#include "settings.h"
-#include "dsp/controller_functions.h"
+#include "foc_motorcontrol.h"
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -166,13 +165,13 @@ typedef struct {
   OPAMP_HandleTypeDef* opamp1;
   OPAMP_HandleTypeDef* opamp2;
   OPAMP_HandleTypeDef* opamp3;
-  WWDG_HandleTypeDef* wwdg;
+//  WWDG_HandleTypeDef* wwdg;
 } FOC_Periph_t;
 
 typedef struct {
 	uint32_t voltage_u, voltage_v, voltage_w;
 	float tmp[4];
-	int32_t tmp1, tmp2, tmp3, int_angle, dbg_opt;
+	int32_t dac1, dac2, dbg_opt;
 	bool force_sensorless;
 	float Kp, Ki;
 } Debug_t;

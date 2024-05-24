@@ -6,10 +6,10 @@
  *
  */
 
-#include "foc_motorcontrol.h"
+#include "foc_functions.h"
+#include "swo_debug.h"            // debug features
 
-#include "swo_debug.h"
-
+// from main.c
 extern Board_Settings_t evspin;
 // from foc_handlers.c
 extern bool adc1_dma, adc2_dma;
@@ -41,18 +41,24 @@ void FOC_Start(void) {
   evspin.foc.limit = ((float)DQLIM_MAX_VOLTAGE / 100.0f) * evspin.adc.vbus;
   evspin.foc.limit_squared = evspin.foc.limit * evspin.foc.limit;
 
-  evspin.open.sync_cnt = 0;
-
-  FOC_PID_Init(&evspin.mras.omega_pid, 10, 2, 0, 100000);
+  FOC_PID_Init(&evspin.mras.omega_pid, PI_MRAS_KP, PI_MRAS_KI, 0, 100000);
   // TODO DEBUG for PID tuning
 //  FOC_PID_Init(&evspin.mras.omega_pid, evspin.dbg.Kp, evspin.dbg.Ki, 0, 100000);
 
+  // reset open-loop synchronization counter
+  evspin.open.sync_cnt = 0;
+
+  // reset flags
   evspin.base.bootstrap_active = false;
   evspin.base.alignment_active = false;
   evspin.base.startup_active = false;
   evspin.base.synchro_active = false;
   evspin.base.run_active = false;
 
+  // turn off sync indicator
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+
+  // advance to the next state
   evspin.state = STATE_BOOTSTRAP;
 
   return;
@@ -164,7 +170,6 @@ void ADCs_Setup(void) {
   }
 
   // configure injected channels: shunt U, shunt W
-  // TODO trigger
   sConfigInjected.InjectedChannel = CS_U_ADC1_CHANNEL;
   sConfigInjected.InjectedRank = ADC_INJECTED_RANK_1;
   sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_24CYCLES_5;
@@ -233,7 +238,6 @@ void ADCs_Setup(void) {
   }
 
   // configure injected channel: current V
-  // TODO trigger
   sConfigInjected.InjectedChannel = CS_V_ADC2_CHANNEL;
   sConfigInjected.InjectedRank = ADC_INJECTED_RANK_1;
   sConfigInjected.InjectedSamplingTime = ADC_SAMPLETIME_24CYCLES_5;
@@ -560,6 +564,7 @@ void TIM1_Setup(void) {
   LL_TIM_ClearFlag_BRK(TIM1);
   LL_TIM_EnableIT_BRK(TIM1);
 
+  // enable output channels, reset and enable the counter
   LL_TIM_CC_EnableChannel(TIM1, (LL_TIM_CHANNEL_CH1 | LL_TIM_CHANNEL_CH1N | LL_TIM_CHANNEL_CH2 |
                             LL_TIM_CHANNEL_CH2N | LL_TIM_CHANNEL_CH3 | LL_TIM_CHANNEL_CH3N));
 
@@ -659,6 +664,23 @@ void ENC_Setup(void) {
   return;
 }
 
+void WWDG_Setup(void) {
+  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_WWDG);
+
+  LL_WWDG_SetPrescaler(WWDG, LL_WWDG_PRESCALER_1);
+  LL_WWDG_SetWindow(WWDG, 64);
+  LL_WWDG_SetCounter(WWDG, 95);
+  LL_WWDG_EnableIT_EWKUP(WWDG);
+//  LL_WWDG_Enable(WWDG);
+}
+
+/**
+ * @brief Assign pointers to ADC handles.
+ * @param adc1 Pointer to ADC1 HAL handle.
+ * @param dma_adc1 Pointer to ADC1 DMA HAL handle.
+ * @param adc2 Pointer to ADC2 HAL handle.
+ * @param dma_adc2 Pointer to ADC2 DMA HAL handle.
+ */
 void EVSPIN32G4_AssignADCs(ADC_HandleTypeDef* adc1, DMA_HandleTypeDef* dma_adc1,
                           ADC_HandleTypeDef* adc2, DMA_HandleTypeDef* dma_adc2)
 {
@@ -670,6 +692,12 @@ void EVSPIN32G4_AssignADCs(ADC_HandleTypeDef* adc1, DMA_HandleTypeDef* dma_adc1,
   return;
 }
 
+/**
+ * @brief Assign pointers to OPAMP handles.
+ * @param opamp1 Pointer to OPAMP1 HAL handle.
+ * @param opamp2 Pointer to OPAMP2 HAL handle.
+ * @param opamp3 Pointer to OPAMP3 HAL handle.
+ */
 void EVSPIN32G4_AssignOPAMPs(OPAMP_HandleTypeDef* opamp1, OPAMP_HandleTypeDef* opamp2,
                              OPAMP_HandleTypeDef* opamp3)
 {
@@ -680,11 +708,14 @@ void EVSPIN32G4_AssignOPAMPs(OPAMP_HandleTypeDef* opamp1, OPAMP_HandleTypeDef* o
   return;
 }
 
-void EVSPIN32G4_AssignWWDG(WWDG_HandleTypeDef* wwdg) {
-  evspin.periph.wwdg = wwdg;
-
-  return;
-}
+/**
+ * @brief Assign pointer to WWDG handle.
+ */
+//void EVSPIN32G4_AssignWWDG(WWDG_HandleTypeDef* wwdg) {
+//  evspin.periph.wwdg = wwdg;
+//
+//  return;
+//}
 
 /**
  * @brief Initialize EVSPIN32G4 board.
@@ -693,7 +724,7 @@ void EVSPIN32G4_Init(void) {
   // check peripheral pointers
   if(evspin.periph.adc1 == NULL || evspin.periph.adc2 == NULL || evspin.periph.dma_adc1 == NULL ||
      evspin.periph.dma_adc2 == NULL || evspin.periph.opamp1 == NULL || evspin.periph.opamp2 == NULL ||
-     evspin.periph.opamp3 == NULL || evspin.periph.wwdg == NULL)
+     evspin.periph.opamp3 == NULL /*|| evspin.periph.wwdg == NULL*/)
   {
     DEBUG_Breakpoint();
     return;
@@ -708,7 +739,6 @@ void EVSPIN32G4_Init(void) {
   OPAMPs_Setup();
   DEBUG_print("OPAMPs self-calibrated and running!\r\n");
 
-//  ADCs_Setup();
   OPAMPs_OffsetCalibration();
   DEBUG_print("OPAMPs offsets calibrated!\r\n");
 
@@ -725,6 +755,11 @@ void EVSPIN32G4_Init(void) {
   evspin.enc.cnt_to_deg = 360.0f / (ENCODER_PULSES * 2);
   DEBUG_print("TIM4 in encoder mode initialized!\r\n");
 
+  // Window watchdog
+  WWDG_Setup();
+  DEBUG_print("WWDG activated!\r\n");
+
+  // default state
   evspin.state = STATE_IDLE;
 
   return;
