@@ -159,7 +159,7 @@ void FOC_SystickScheduler(void) {
 }
 
 
-/* --- INDIVIDUAL PHASES */
+/* --- INDIVIDUAL STATES */
 /**
  * @brief Non-blocking function to handle charging of bootstrap capacitors.
  *        Executed by low-frequency scheduler.
@@ -167,11 +167,13 @@ void FOC_SystickScheduler(void) {
 void FOC_ChargeBootstraps(void) {
   if(evspin.base.bootstrap_active == true) {
     if(HAL_GetTick() - evspin.base.clock > BOOTSTRAP_TIME) {
+      // configure outputs to their idle state
       LL_TIM_OC_SetCompareCH1(TIM1, (LL_TIM_GetAutoReload(TIM1) / 2));
       LL_TIM_OC_SetCompareCH2(TIM1, (LL_TIM_GetAutoReload(TIM1) / 2));
       LL_TIM_OC_SetCompareCH3(TIM1, (LL_TIM_GetAutoReload(TIM1) / 2));
       LL_TIM_GenerateEvent_UPDATE(TIM1);
 
+      // advance to the next state
       evspin.base.bootstrap_active = false;
       evspin.state = STATE_READY;
     }
@@ -179,7 +181,7 @@ void FOC_ChargeBootstraps(void) {
   else {
     evspin.base.clock = HAL_GetTick();
     evspin.base.bootstrap_active = true;
-
+    // turn all three low-side switches ON
     LL_TIM_OC_SetCompareCH1(TIM1, 0);
     LL_TIM_OC_SetCompareCH2(TIM1, 0);
     LL_TIM_OC_SetCompareCH3(TIM1, 0);
@@ -197,14 +199,16 @@ void FOC_ChargeBootstraps(void) {
 void FOC_AlignRotor(void) {
   if(evspin.base.alignment_active == true) {
     uint32_t elapsed = HAL_GetTick() - evspin.base.clock;
+
     if(elapsed > ALIGNMENT_TIME) {
-      // TODO ENCODER
+      // assume that the rotor is at ALIGNMENT_ANGLE and calibrate the encoder
       evspin.enc.el_position = ALIGNMENT_ANGLE * (1 / evspin.enc.cnt_to_deg);
       evspin.enc.mech_position = evspin.enc.el_position / MOTOR_POLEPAIRS;
       LL_TIM_SetCounter(TIM4, evspin.enc.mech_position);
       LL_TIM_EnableCounter(TIM4);
       LL_TIM_ClearFlag_UPDATE(TIM4);
 
+      // prepare the FOC to start
       evspin.foc.angle = ALIGNMENT_ANGLE;
       evspin.foc.Id_pid.target = 0;
       evspin.foc.Iq_pid.target = STARTUP_CURRENT;
@@ -212,6 +216,7 @@ void FOC_AlignRotor(void) {
       evspin.base.alignment_active = false;
 
 #if SENSORLESS == 1
+      // set initial conditions for the observer
       evspin.open.angle = ALIGNMENT_ANGLE;
       evspin.mras.Id_ada = 0;
       evspin.mras.Iq_ada = STARTUP_CURRENT;
@@ -246,7 +251,9 @@ void FOC_AlignRotor(void) {
 void FOC_OpenLoop_StartUp(void) {
   if(evspin.base.startup_active == true) {
     evspin.open.elapsed_time_ms = HAL_GetTick() - evspin.base.clock;
+
     if(evspin.open.elapsed_time_ms < STARTUP_TIME) {
+      // increment speed and angle of the virtual position sensor
       evspin.open.actual_speed = evspin.open.accel_rate * evspin.open.elapsed_time_ms;
 
       evspin.open.angle_increment = evspin.open.actual_speed * 360.0f / 60.0f * _SWITCHING_PERIOD_MS / 1000.0f;
@@ -269,10 +276,9 @@ void FOC_OpenLoop_StartUp(void) {
     evspin.base.clock = HAL_GetTick();
     evspin.base.startup_active = true;
 
+    // compute the slope of the acceleration ramp
     evspin.open.accel_rate = (float)STARTUP_SPEED / (float)STARTUP_TIME;      // rad/ms
     evspin.open.elapsed_time_ms = 0;
-
-//    evspin.foc.angle = ALIGNMENT_ANGLE;
   }
 }
 
@@ -285,15 +291,21 @@ void FOC_PositionSynchronization(void) {
   if(evspin.base.synchro_active == true) {
     uint32_t elapsed = HAL_GetTick() - evspin.base.clock;
     if(elapsed < SYNCHRONIZATION_TIME) {
+      // continuously increment the angle to keep the motor spinning
       evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
 
       // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
       if(evspin.open.angle >= 180.0f * MOTOR_POLEPAIRS) {
         evspin.open.angle -= 360.0f * MOTOR_POLEPAIRS;
       }
+      else if(evspin.open.angle <= 180.0f * MOTOR_POLEPAIRS) {
+        evspin.open.angle += 360.0f * MOTOR_POLEPAIRS;
+      }
 
       // gradually lower q-axis current
       evspin.foc.Iq_pid.target = FOC_LinearRamp(STARTUP_CURRENT, (2 * STARTUP_CURRENT / 3), SYNCHRONIZATION_TIME, elapsed);
+
+      // synchronization conditions
 #if SENSORLESS == 1
       if((abs((int)evspin.mras.angle_ada_deg - (int)evspin.open.angle) % 360) < 45) {
         if(evspin.open.sync_cnt >= 5 && (abs((int)evspin.mras.speed_mech_ada - STARTUP_SPEED)) < 100) {
@@ -301,7 +313,7 @@ void FOC_PositionSynchronization(void) {
       if((abs((int)evspin.enc.angle - (int)evspin.open.angle) % 360) < 45) {
         if(evspin.open.sync_cnt >= 5 && (abs((int)evspin.enc.speed_filtered - STARTUP_SPEED)) < 100) {
 #endif
-//          DEBUG_print("SYNC\r\n");
+          // indicate synchronization on LED3
           HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
           evspin.base.synchro_active = false;
           evspin.state = STATE_RUN;
@@ -330,6 +342,7 @@ void FOC_PositionSynchronization(void) {
     // set scope trigger pin high
     HAL_GPIO_WritePin(DBG_TRG_GPIO_Port, DBG_TRG_Pin, GPIO_PIN_SET);
 
+    // increment the angle to keep the motor spinning
     evspin.open.angle += (evspin.open.angle_increment * MOTOR_POLEPAIRS);
   }
 }
@@ -361,7 +374,7 @@ void FOC_RunTask(void) {
     }
   }
 
-  evspin.base.run_active = true;      // TODO ne tak casto
+  evspin.base.run_active = true;
 }
 
 /* --- AUXILIARY FUNCTIONS */
@@ -462,6 +475,7 @@ void FOC_EncoderProcessing(void) {
  * @brief Main FOC task. Called after every current measurement conversion.
  */
 void FOC_MainControl(void) {
+  // select the source of position information based on actual state
   switch(evspin.state) {
   case STATE_STARTUP:
   case STATE_SYNCHRO:
@@ -508,6 +522,7 @@ void FOC_MainControl(void) {
   LL_TIM_OC_SetCompareCH3(TIM1, evspin.foc.tim.phW);
   LL_TIM_GenerateEvent_UPDATE(TIM1);
 
+  // save which phase has the highest duty-cycle
   evspin.foc.tim.phHighest = _max3_i32(evspin.foc.tim.phU, evspin.foc.tim.phV, evspin.foc.tim.phW, &evspin.foc.tim.phHighest_id);
 }
 
@@ -515,59 +530,13 @@ void FOC_MainControl(void) {
  * @brief Model Reference Adaptive System observer.
  */
 void FOC_MRAS(void) {
-  // TODO DEBUG
-  evspin.mras.angle = evspin.foc.angle;
-  if(evspin.state == STATE_RUN) {
-    evspin.mras.speed = evspin.run.speed;   // only to compare
-  }
-
   /* ADAPTIVE SYSTEM */
   float sin, cos;
   // TODO use CORDIC
   arm_sin_cos_f32(evspin.mras.angle_ada_deg, &sin, &cos);
-//  arm_sin_cos_f32(evspin.mras.angle, &sin, &cos);
 
   // convert rpm to rad/s
   int32_t speed_mech_rad = evspin.mras.speed_mech_ada * 2 * PI / 60.0f;
-
-//  float Id_dot1, Iq_dot1;
-//#if SIMPLE_EULER == 1
-//  // (Simple) Euler's method
-//  Id_dot1 = evspin.mras.Id_ada + ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//             + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
-//             + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
-//  Iq_dot1 = evspin.mras.Iq_ada + ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//            - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
-//            - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//            + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L))) * (_SWITCHING_PERIOD_MS/1000);
-//
-//  evspin.mras.Id_ada = Id_dot1;
-//  evspin.mras.Iq_ada = Iq_dot1;
-//#else
-//  // Modified Euler's method
-//  Id_dot1 = ((evspin.mras.Id_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//          + (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Iq_ada)
-//          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//  Iq_dot1 = ((evspin.mras.Iq_ada * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//          - (speed_mech_rad * MOTOR_POLEPAIRS * evspin.mras.Id_ada)
-//          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//
-//  float Id_dot2, Iq_dot2;
-//  float Id_pred = evspin.mras.Id_ada + (_SWITCHING_PERIOD_MS/1000) * Id_dot1;
-//  float Iq_pred = evspin.mras.Iq_ada + (_SWITCHING_PERIOD_MS/1000) * Iq_dot1;
-//
-//  Id_dot2 = ((Id_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//          + (speed_mech_rad * MOTOR_POLEPAIRS * Iq_pred)
-//          + ((evspin.foc.Vd_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//  Iq_dot2 = ((Iq_pred * (-_MRAS_MOTOR_R / _MRAS_MOTOR_L))
-//          - (speed_mech_rad * MOTOR_POLEPAIRS * Id_pred)
-//          - (speed_mech_rad * ((MOTOR_BEMF_CONSTANT * 1000) * (1 / _MRAS_MOTOR_L)))
-//          + ((evspin.foc.Vq_sat /*/ 1000*/) * (1 / _MRAS_MOTOR_L)));
-//
-//  evspin.mras.Id_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Id_dot1 + Id_dot2);
-//  evspin.mras.Iq_ada += (0.5f * (_SWITCHING_PERIOD_MS/1000)) * (Iq_dot1 + Iq_dot2);
-//#endif
 
   float Ialpha_dot1, Ibeta_dot1;
 #if SIMPLE_EULER == 1
@@ -624,12 +593,10 @@ void FOC_MRAS(void) {
                         - (((evspin.mras.Iq / 1000) - (evspin.mras.Iq_ada / 1000))
                             * (MOTOR_BEMF_CONSTANT / MOTOR_POLEPAIRS) * (1 / _MRAS_MOTOR_L));
 
-//  float speed_el_prev = evspin.mras.speed_el_ada;       // TODO TEST!
+
   // speed in rad/s
   evspin.mras.speed_el_ada = FOC_PID(&evspin.mras.omega_pid, evspin.mras.speed_error);
 
-//  float angle_tmp = 0.5 * (evspin.mras.speed_el_ada + speed_el_prev);
-//  evspin.mras.angle_ada += angle_tmp * (_SWITCHING_PERIOD_MS/1000);     // TODO TEST!
   evspin.mras.angle_ada += evspin.mras.speed_el_ada * (_SWITCHING_PERIOD_MS/1000);
 
   // limit angle to the range [-180 * POLEPAIRS, 180 * POLEPAIRS]
@@ -642,7 +609,7 @@ void FOC_MRAS(void) {
   // convert angle from radians to degrees
   evspin.mras.angle_ada_deg = evspin.mras.angle_ada * (360.0f / (2 * PI));
 
-  // convert rad/s to rpm   // TODO redundant?
+  // convert rad/s to rpm
   evspin.mras.speed_el_ada *= 60.0f / (2 * PI);
   // convert to mechanical speed
   evspin.mras.speed_mech_ada = evspin.mras.speed_el_ada * (1.0f / MOTOR_POLEPAIRS);
@@ -732,6 +699,7 @@ void FOC_Modulator(float Valpha, float Vbeta, int32_t* Va, int32_t* Vb, int32_t*
   *Vb = tmpB * (int32_t)LL_TIM_GetAutoReload(TIM1) / (int32_t)(2 * evspin.adc.vbus) + ((int32_t)LL_TIM_GetAutoReload(TIM1) / 2);
   *Vc = tmpC * (int32_t)LL_TIM_GetAutoReload(TIM1) / (int32_t)(2 * evspin.adc.vbus) + ((int32_t)LL_TIM_GetAutoReload(TIM1) / 2);
 
+  // safety additional clamping of counter values
   if(*Va > evspin.foc.tim.maxCCR)
     *Va = evspin.foc.tim.maxCCR;
   else if(*Va < DQLIM_CCR_LIMIT)

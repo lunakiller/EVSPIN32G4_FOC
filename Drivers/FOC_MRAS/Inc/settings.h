@@ -32,7 +32,7 @@
 #define DEAD_TIME                   ((uint16_t) 300)                // deadtime in ns
 
 // Motor parameters
-#define MOTOR_POLEPAIRS             ((uint8_t)  7)
+#define MOTOR_POLEPAIRS             ((uint8_t)  7)                  // number of motor pole-pairs
 
 // Settings for the sensorless mode
 #define PHASE_TO_PHASE              (1)                             // 1 - resistance and inductance is internally halved

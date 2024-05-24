@@ -81,7 +81,6 @@ static void MX_ADC2_Init(void);
 static void MX_OPAMP1_Init(void);
 static void MX_OPAMP2_Init(void);
 static void MX_OPAMP3_Init(void);
-static void MX_WWDG_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_DAC1_Init(void);
 static void MX_TIM6_Init(void);
@@ -139,7 +138,6 @@ int main(void)
   MX_TIM6_Init();
   MX_TIM7_Init();
   /* USER CODE BEGIN 2 */
-//  MX_WWDG_Init();
   DEBUG_print("--- SWO init\r\n");
   HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, GPIO_PIN_SET);
   DEBUG_print("STSPIN32G4 initialized!\r\n");
@@ -149,9 +147,8 @@ int main(void)
   EVSPIN32G4_AssignOPAMPs(&hopamp1, &hopamp2, &hopamp3);
 //  EVSPIN32G4_AssignWWDG(&hwwdg);
   EVSPIN32G4_Init();
-//  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
 
-  // TODO DEBUG DAC settings
+  // DEBUG DAC settings
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
   HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
   HAL_DMA_Start(&hdma_tim6_up, (uint32_t)&(evspin.dbg.dac1), (uint32_t)&DAC1->DHR12R1, 1);
@@ -161,17 +158,13 @@ int main(void)
   HAL_TIM_Base_Start(&htim6);
   HAL_TIM_Base_Start(&htim7);
 
-  // TODO DEBUG
-  evspin.dbg.Kp = 10;
-  evspin.dbg.Ki = 2;
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    if(start == true) {
+    if(start == true && (evspin.state == STATE_IDLE || evspin.state == STATE_ERROR)) {
       start = false;
 
       FOC_Start();
@@ -1010,35 +1003,6 @@ static void MX_USART1_UART_Init(void)
   /* USER CODE BEGIN USART1_Init 2 */
 
   /* USER CODE END USART1_Init 2 */
-
-}
-
-/**
-  * @brief WWDG Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_WWDG_Init(void)
-{
-
-  /* USER CODE BEGIN WWDG_Init 0 */
-
-  /* USER CODE END WWDG_Init 0 */
-
-  /* Peripheral clock enable */
-  LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_WWDG);
-
-  /* USER CODE BEGIN WWDG_Init 1 */
-
-  /* USER CODE END WWDG_Init 1 */
-  LL_WWDG_SetCounter(WWDG, 95);
-  LL_WWDG_Enable(WWDG);
-  LL_WWDG_SetPrescaler(WWDG, LL_WWDG_PRESCALER_1);
-  LL_WWDG_SetWindow(WWDG, 64);
-  LL_WWDG_EnableIT_EWKUP(WWDG);
-  /* USER CODE BEGIN WWDG_Init 2 */
-
-  /* USER CODE END WWDG_Init 2 */
 
 }
 

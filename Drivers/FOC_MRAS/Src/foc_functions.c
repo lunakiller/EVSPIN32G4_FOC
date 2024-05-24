@@ -37,13 +37,13 @@ void FOC_Start(void) {
   evspin.foc.tim.phU = (LL_TIM_GetAutoReload(TIM1) / 2);
   evspin.foc.tim.phV = (LL_TIM_GetAutoReload(TIM1) / 2);
   evspin.foc.tim.phW = (LL_TIM_GetAutoReload(TIM1) / 2);
-
-  evspin.foc.limit = ((float)DQLIM_MAX_VOLTAGE / 100.0f) * evspin.adc.vbus;
-  evspin.foc.limit_squared = evspin.foc.limit * evspin.foc.limit;
-
   FOC_PID_Init(&evspin.mras.omega_pid, PI_MRAS_KP, PI_MRAS_KI, 0, 100000);
   // TODO DEBUG for PID tuning
 //  FOC_PID_Init(&evspin.mras.omega_pid, evspin.dbg.Kp, evspin.dbg.Ki, 0, 100000);
+
+  // initialize variables for DQ limiter
+  evspin.foc.limit = ((float)DQLIM_MAX_VOLTAGE / 100.0f) * evspin.adc.vbus;
+  evspin.foc.limit_squared = evspin.foc.limit * evspin.foc.limit;
 
   // reset open-loop synchronization counter
   evspin.open.sync_cnt = 0;
@@ -56,7 +56,7 @@ void FOC_Start(void) {
   evspin.base.run_active = false;
 
   // turn off sync indicator
-  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
+  HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_RESET);
 
   // advance to the next state
   evspin.state = STATE_BOOTSTRAP;
@@ -656,14 +656,17 @@ void ENC_Setup(void) {
   LL_TIM_CC_EnableChannel(TIM4, LL_TIM_CHANNEL_CH1);
   LL_TIM_CC_EnableChannel(TIM4, LL_TIM_CHANNEL_CH2);
 
+  // set filter
   evspin.enc.speed_lpf.alpha = 0.95;
 
-//  LL_TIM_EnableCounter(TIM4);
   LL_TIM_ClearFlag_UPDATE(TIM4);
 
   return;
 }
 
+/**
+ * @brief Configure the window watchdog.
+ */
 void WWDG_Setup(void) {
   LL_APB1_GRP1_EnableClock(LL_APB1_GRP1_PERIPH_WWDG);
 

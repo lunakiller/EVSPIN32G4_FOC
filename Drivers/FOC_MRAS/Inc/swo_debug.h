@@ -15,7 +15,7 @@
     }
   }
 
-  static void DEBUG_Breakpoint(void) {
+  __attribute__((unused)) static void DEBUG_Breakpoint(void) {
     // place the breakpoint either on the function or on the NOP
     __NOP();
   }
