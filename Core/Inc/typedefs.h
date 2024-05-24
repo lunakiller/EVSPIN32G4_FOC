@@ -172,8 +172,7 @@ typedef struct {
 typedef struct {
 	uint32_t voltage_u, voltage_v, voltage_w;
 	float tmp[4];
-	int32_t tmp1, tmp2, int_angle;
-	LPF_f32_t mras_flt;
+	int32_t tmp1, tmp2, tmp3, int_angle, dbg_opt;
 	bool force_sensorless;
 	float Kp, Ki;
 } Debug_t;

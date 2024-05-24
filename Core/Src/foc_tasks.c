@@ -100,12 +100,12 @@ void FOC_SystickScheduler(void) {
 //    evspin.dbg.tmp[1] = evspin.mras.Iq_ada;
 //    evspin.dbg.tmp[2] = evspin.foc.Id;
 //    evspin.dbg.tmp[3] = evspin.mras.Id_ada;
-//    evspin.dbg.tmp[2] = evspin.foc.Valpha;
-//    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
+    evspin.dbg.tmp[2] = evspin.foc.Valpha;
+    evspin.dbg.tmp[3] = evspin.foc.Vbeta;
 //    evspin.dbg.tmp[0] = evspin.foc.Vq;
 //    evspin.dbg.tmp[1] = evspin.foc.Vd;
-    evspin.dbg.tmp[0] = evspin.mras.speed_mech_ada - evspin.enc.speed_filtered;
-    evspin.dbg.tmp[1] = evspin.mras.angle_ada - evspin.foc.angle;
+//    evspin.dbg.tmp[0] = evspin.mras.speed_mech_ada - evspin.enc.speed_filtered;
+//    evspin.dbg.tmp[1] = evspin.mras.angle_ada_deg - evspin.enc.angle;
   }
 
 
@@ -398,7 +398,7 @@ void FOC_PositionSynchronization(void) {
       if((abs((int)evspin.enc.angle - (int)evspin.open.angle) % 360) < 45) {
         if(evspin.open.sync_cnt >= 5 && (abs((int)evspin.enc.speed_filtered - STARTUP_SPEED)) < 100) {
 #endif
-          DEBUG_print("SYNC\r\n");
+//          DEBUG_print("SYNC\r\n");
           HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, GPIO_PIN_SET);
           evspin.base.synchro_active = false;
           evspin.state = STATE_RUN;
@@ -610,17 +610,6 @@ void FOC_MRAS(void) {
   evspin.mras.speed_el_ada *= 60.0f / (2 * PI);
   // convert to mechanical speed
   evspin.mras.speed_mech_ada = evspin.mras.speed_el_ada * (1.0f / MOTOR_POLEPAIRS);
-
-  // TODO DEBUG DAC
-//  evspin.dbg.tmp1 = evspin.mras.Iq_ada;
-//  evspin.dbg.tmp2 = evspin.foc.Iq;
-//  evspin.dbg.tmp1 = evspin.mras.Id_ada / 4;
-//  evspin.dbg.tmp2 = evspin.foc.Id / 4;
-//  evspin.dbg.tmp1 = evspin.mras.angle;
-  evspin.dbg.tmp1 = evspin.mras.angle_ada_deg;
-//  evspin.dbg.tmp1 = evspin.enc.speed_filtered;
-  evspin.dbg.tmp2 = evspin.mras.speed_mech_ada;
-
 }
 
 /**
@@ -721,10 +710,6 @@ void FOC_MainControl(void) {
   LL_TIM_GenerateEvent_UPDATE(TIM1);
 
   evspin.foc.tim.phHighest = _max3_i32(evspin.foc.tim.phU, evspin.foc.tim.phV, evspin.foc.tim.phW, &evspin.foc.tim.phHighest_id);
-
-  // TODO DEBUG DAC
-//  evspin.dbg.tmp1 = evspin.foc.Vd_sat / 8;
-//  evspin.dbg.tmp2 = evspin.mras.Id_ada / 8;
 }
 
 /**

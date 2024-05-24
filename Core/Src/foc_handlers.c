@@ -83,6 +83,76 @@ void ADC1_2_IRQHandler(void) {
     default:
       break;
     }
+
+    // TODO DEBUG DAC
+    switch(evspin.dbg.dbg_opt) {
+    case 0:       // MRAS position estimate
+      evspin.dbg.tmp1 = evspin.mras.angle_ada_deg;
+      evspin.dbg.tmp2 = evspin.mras.speed_mech_ada;
+      break;
+    case 1:       // angle comparison MRAS vs Open-loop
+      evspin.dbg.tmp1 = evspin.mras.angle_ada_deg;
+      evspin.dbg.tmp2 = evspin.foc.angle;
+      break;
+    case 2:       // angle comparison MRAS vs encoder
+      evspin.dbg.tmp1 = evspin.mras.angle_ada_deg;
+      evspin.dbg.tmp2 = evspin.enc.angle;
+      break;
+    case 3:       // speed comparison MRAS vs encoder
+      evspin.dbg.tmp1 = evspin.mras.speed_mech_ada;
+      evspin.dbg.tmp2 = evspin.enc.speed_filtered;
+      break;
+    case 4:       // MRAS vs FOC q currents
+      evspin.dbg.tmp1 = evspin.mras.Iq_ada;
+      evspin.dbg.tmp2 = evspin.foc.Iq;
+      break;
+    case 5:       // MRAS vs FOC d currents
+      evspin.dbg.tmp1 = evspin.mras.Id_ada / 4.0;
+      evspin.dbg.tmp2 = evspin.foc.Id;
+      break;
+    case 10:      // FOC dq currents
+      evspin.dbg.tmp1 = evspin.foc.Iq;
+      evspin.dbg.tmp2 = evspin.foc.Id;
+      break;
+    case 11:      // FOC alpha-beta currents
+      evspin.dbg.tmp1 = evspin.foc.Ialpha;
+      evspin.dbg.tmp2 = evspin.foc.Ibeta;
+      break;
+    case 12:      // FOC ab currents
+      evspin.dbg.tmp1 = evspin.foc.currents_comp[0];
+      evspin.dbg.tmp2 = evspin.foc.currents_comp[1];
+      break;
+    case 20:      // MRAS dq currents
+      evspin.dbg.tmp1 = evspin.mras.Iq_ada;
+      evspin.dbg.tmp2 = evspin.mras.Id_ada / 4.0;
+      break;
+    case 21:      // MRAS speed error
+      evspin.dbg.tmp1 = evspin.mras.speed_error;
+      evspin.dbg.tmp2 = evspin.mras.speed_mech_ada;
+      break;
+    case 30:      // FOC dq voltages
+      evspin.dbg.tmp1 = evspin.foc.Vq / 6.0;
+      evspin.dbg.tmp2 = evspin.foc.Vd / 6.0;
+      break;
+    case 31:      // FOC alpha-beta voltages
+      evspin.dbg.tmp1 = evspin.foc.Valpha/ 6.0;
+      evspin.dbg.tmp2 = evspin.foc.Vbeta / 6.0;
+      break;
+    case 40:      // ab voltages from filtered ADC
+      evspin.dbg.tmp1 = ((evspin.adc.buffers.ADC1_reg_raw[U_ADC1] * evspin.adc.vdda / 4096.0f * VMOT_COEFF) - (evspin.adc.vbus / 2)) / 6.0;
+      evspin.dbg.tmp2 = ((evspin.adc.buffers.ADC1_reg_raw[V_ADC1] * evspin.adc.vdda / 4096.0f * VMOT_COEFF) - (evspin.adc.vbus / 2)) / 6.0;
+      break;
+    case 41:      // FOC vs ADC alpha voltages
+      float a, b;
+      evspin.dbg.tmp1 = ((evspin.adc.buffers.ADC1_reg_raw[U_ADC1] * evspin.adc.vdda / 4096.0f * VMOT_COEFF) - (evspin.adc.vbus / 2)) / 6.0;
+      arm_inv_clarke_f32(evspin.foc.Valpha, evspin.foc.Vbeta, &a, &b);
+      evspin.dbg.tmp2 = a / 6.0;
+      break;
+    default:
+      evspin.dbg.tmp1 = 0;
+      evspin.dbg.tmp2 = 0;
+      break;
+    }
   }
   else if(LL_ADC_IsActiveFlag_AWD1(hadc1.Instance)) {
     DEBUG_print("AWDG!\r\n");
